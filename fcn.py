@@ -126,7 +126,7 @@ def load_model(GPU=True,n_class=1):
     vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
     fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
     
-    print('using '+bu.just_filename(bu,vggname)+' and '+\
+    print('Using '+bu.just_filename(bu,vggname)+' and '+\
           bu.just_filename(bu,fcnname)+'...')
     
     vgg_model.load_state_dict(torch.load(vggname))

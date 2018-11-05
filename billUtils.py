@@ -3,6 +3,8 @@
 """
 Created on Fri Jul 20 11:05:41 2018
 
+Things I can't believe are not part of a package. Maybe they are! 
+
 @author: bill
 """
 import tkinter as tk
@@ -30,14 +32,6 @@ def uichoosedir():
                     #  from appearing
     pathname = tk.filedialog.askdirectory()
     return pathname
-
-#from tkinter import filedialog
-#dirselect = filedialog.Directory()
-#dirs = []
-#while True:
-#    d = dirselect.show()
-#    if not d: break
-#    dirs.append(d)
 
 def uichoosedirs():
     root = tk.Tk()
