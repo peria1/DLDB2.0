@@ -117,6 +117,10 @@ class DLDB():
                         
             dir_to_process = input_directory + self.get_slash() + '*.' + file_type
             newSourceImages = sorted(glob.glob(dir_to_process))
+            if not newSourceImages:
+                print('There are no ' + file_type + ' files in ' + input_directory)
+                return
+
            
 #            pick = 0
 #            print(type(newSourceImages[0]))
@@ -139,7 +143,7 @@ class DLDB():
             txn1 = None
             newLMDB = None
             firstThisLMDB = 0
-            print(newSourceImages)
+
             
             for currentFile in newSourceImages:
                 tiles_to_start = tileCount

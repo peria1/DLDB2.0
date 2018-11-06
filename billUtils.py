@@ -21,7 +21,7 @@ def uichoosefile(title = None):
 def uichoosefiles(title = None):
     root = tk.Tk()
     root.withdraw() # we don't want a full GUI, so keep the root window from appearing
-    filename = tk.filedialog.askopenfilenames(title=title))
+    filename = tk.filedialog.askopenfilenames(title=title)
     return filename
 
 
@@ -30,7 +30,7 @@ def uichoosedir(title = None):
     root.focus_force()
     root.withdraw() # we don't want a full GUI, so keep the root window 
                     #  from appearing
-    pathname = tk.filedialog.askdirectory(title=title))
+    pathname = tk.filedialog.askdirectory(title=title)
     return pathname
 
 def uichoosedirs(title = None):
@@ -39,7 +39,7 @@ def uichoosedirs(title = None):
     root.withdraw() # we don't want a full GUI, so keep the root window 
                     #  from appearing
     pathnames = []
-    dirselect = tk.filedialog.Directory(title=title))
+    dirselect = tk.filedialog.Directory(title=title)
     while True:
         d = dirselect.show()
         if not d: break
