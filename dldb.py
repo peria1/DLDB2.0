@@ -353,6 +353,60 @@ class DLDB():
         # print('file key is ',self.just_filename(currentFile).encode())
         txn.put(self.just_filename(currentFile).encode(), pickle.dumps(stuff))
 
+    def get_aug_trans(self, ntiles, xysize, debug=False):
+            #
+            # Augment the data by doing a left-right flip, one of four 90
+            # degree rotatations, and a randomly oriented stretch or 
+            # compression. This last deformation is lognormal distributed, 
+            # with a standard deviation of 0.2 . 
+            #
+            # I want to describe all these augmentations by matrix factors, 
+            # so that I can build up one transformation matrix and then 
+            # use it for both masks and images. 
+            #
+            width, height = xysize
+        
+            flipit = np.random.randint(0,high=2,size=ntiles)
+            nrot = np.random.randint(0,high=4,size=ntiles)
+            theta = np.random.uniform(low=0.0, high=2.0*np.pi,size=ntiles)
+            stretch = np.random.lognormal(sigma = .2,size=ntiles)
+
+            F = lambda f: np.asmatrix([[1-2*f,  0, width*f],\
+                                       [  0,    1,    0   ],\
+                                       [  0,    0,    1   ]])
+            
+            dx = [0, 0, width, width]
+            dy = [0, height, height,0]
+            
+            
+            C90 = np.abs(2-np.asarray([0,1,2,3])) - 1  # cos(n pi/2)
+            S90 = np.roll(C90,1)
+            R90n = lambda n: np.asmatrix([[ C90[n],  S90[n], dx[n]],\
+                                          [-S90[n],  C90[n], dy[n]],\
+                                          [  0,        0,   1]])
+            
+            R = lambda tht: np.matrix([[np.cos(tht), -np.sin(tht), 0],\
+                                       [np.sin(tht),  np.cos(tht), 0],\
+                                       [    0,             0,      1]])
+            S = lambda strch : np.asarray([[strch,0,0],[0,1,0],[0,0,1]])
+            T = lambda fi,nr,tht,strch: \
+            np.matmul(np.matmul(np.matmul(R(-tht),np.matmul(S(strch),R(tht))),\
+                                R90n(nr)),F(fi))
+            Tinv = lambda fi,nr,tht,strch : np.linalg.inv(T(fi,nr,tht,strch))
+            # need to loop and return ntiles x 3 x 3
+    
+            if debug:
+                for i in range(ntiles):
+                    print('flip,nrot,theta,stretch = ',flipit[i],nrot[i],\
+                          theta[i],stretch[i])
+            
+            aminv = np.zeros((ntiles,3,3))
+            for i in range(ntiles):
+                aminv[i,:,:] = Tinv(flipit[i],nrot[i],theta[i],stretch[i])
+                
+            return aminv
+
+
     def feed_pytorch(self,N=None,maskfile=None,augment=False):
 
         if type(N) is list:
@@ -372,20 +426,13 @@ class DLDB():
         inbatch = (inbatch - np.mean(inbatch))/np.std(inbatch)
         
         if augment:
-            flipit = np.random.randint(0,high=2,size=ntiles)
-            nrot = np.random.randint(0,high=4,size=ntiles)
-            
-            R = lambda tht: np.asarray([[np.cos(tht), -np.sin(tht),0],\
-                                       [ np.sin(tht),  np.cos(tht),0],\
-                                       [0,0,1]])
-            S = lambda strch : np.asarray([[strch,0,0],[0,1,0],[0,0,1]])
-            T = lambda tht,strch: np.matmul(R(-tht),np.matmul(S(strch),R(tht)))
-            Tinv = lambda tht,strch : np.linalg.inv(T(tht,strch))
-            theta = np.random.uniform(low=0.0, high=2.0*np.pi,size=ntiles)
-            stretch = np.random.lognormal(sigma = .2,size=ntiles)
+            augmatinv = self.get_aug_trans(ntiles,(nx,ny))
+            for i in range(ntiles):
+                inbatch[i,:,:,:] = warp(inbatch[i,:,:,:], augmatinv[i,:,:],\
+                       mode='reflect')
 
         if not maskfile == None:
-            maskbatch = np.ndarray(inbatch.shape)
+            maskbatch = np.zeros_like(inbatch)
             I = openslide.open_slide(self.input_directory + '/' + maskfile)
             if len(I.level_dimensions) > 1:
                 print('Careful! Using level zero for masks may be incorrect!')
@@ -395,40 +442,17 @@ class DLDB():
 
             if augment:# need both data and masks
                 for i in range(ntiles):
-                    if flipit[i] == 1:
-                        inbatch[i,:,:,:] =  np.flip(inbatch[i,:,:,:],1)
-                        maskbatch[i,:,:,:] = np.flip(maskbatch[i,:,:,:],1)
-                    if nrot[i] > 0:
-                        inbatch[i,:,:,:] = \
-                        np.rot90(inbatch[i,:,:,:],axes=(0,1),k=nrot[i])
-                        maskbatch[i,:,:,:] = \
-                        np.rot90(maskbatch[i,:,:,:],axes=(0,1),k=nrot[i])
-                    
-                    invT = Tinv(theta[i],stretch[i])
-                    inbatch[i,:,:,:] = warp(inbatch[i,:,:,:],invT,mode='reflect')
-#                    print('HEY! masks not being warped!!!')
-                    maskbatch[i,:,:,:] = warp(maskbatch[i,:,:,:],invT,mode='reflect')
-                maskbatch = np.round(maskbatch) # must be either zero or 1. 
- 
+                    maskbatch[i,:,:,:] = warp(maskbatch[i,:,:,:], augmatinv[i,:,:],\
+                           mode='reflect')
             maskbatch = np.transpose(maskbatch,axes=[0,3,1,2])
-            inbatch = np.transpose(inbatch[:,:,:,0:3],axes=[0,3,1,2])
-           
-            return torch.from_numpy(inbatch).float(), maskbatch
 
-        print('Into no_mask section of code!!!!!!!!!!!!!!!!!!!!!!!!')
-        if augment:  # no masks
-            for i in range(ntiles):
-                if flipit[i] == 1:
-                    inbatch[i,:,:,:] =  np.flip(inbatch[i,:,:,:],1)
-                if nrot[i] > 0:
-                    inbatch[i,:,:,:] = \
-                    np.rot90(inbatch[i,:,:,:],axes=(1,2),k=nrot[i])
-                invT = Tinv(theta[i],stretch[i])
-                inbatch[i,:,:,:] = warp(inbatch[i,:,:,:],invT,mode='reflect')
-
+ 
         inbatch = np.transpose(inbatch[:,:,:,0:3],axes=[0,3,1,2])
-    
-        return torch.from_numpy(inbatch).float()
+
+        if not maskfile == None:
+            return torch.from_numpy(inbatch).float(), maskbatch
+        else:
+            return torch.from_numpy(inbatch).float()
         
         
         
