@@ -32,9 +32,10 @@ class Model:
     def get_model(self):
         return self.model
     
-    def display_feature(self):
-        print('soon I will display a feature...')
-        pass
+    def display_feature(self,v):
+        print(v.get())
+        print(self.model.state_dict()[v.get()].size())
+        
 #    def calculate(self):
 #        x, y = np.meshgrid(np.linspace(-5, 5, self.xpoint), np.linspace(-5, 5, self.ypoint))
 #        z = np.cos(x ** 2 * y ** 3)
@@ -62,17 +63,17 @@ class View:
         self.plotBut.bind("<Button>", self.plot)
 
         optionList = tuple([key for key,item in self.model.named_parameters()])
-        self.v = Tk.StringVar(master=self.frame2)
+        self.v = Tk.StringVar(master=self.frame2,name="feature")
         self.v.set(optionList[0])
-        self.paramMenu = Tk.OptionMenu(self.frame2, self.v, *optionList, command=model.display_feature())
+        self.v.trace_add("write",lambda *_, var=self.v : model.display_feature(var))
+        #cb1_var.trace('w', lambda *_, var=cb1_var: validate(var))
+        self.paramMenu = Tk.OptionMenu(self.frame2, self.v, *optionList)
         self.paramMenu.pack(side="top",fill=Tk.BOTH)
                 
         self.quitButton = Tk.Button(self.frame2, text="Quit")
         self.quitButton.pack(side="top", fill=Tk.BOTH)
         self.quitButton.bind("<Button>", self.quitit)
         
-
-#-------------------------
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.frame)
         self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
         self.canvas.draw()
