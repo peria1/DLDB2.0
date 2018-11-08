@@ -118,17 +118,30 @@ def make_layers(cfg, batch_norm=False):
             in_channels = v
     return nn.Sequential(*layers)
 
-def load_model(GPU=True,n_class=1):
-    
+def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
+               vggname=None, fcnname=None):
+    print(fcnname)
+    # Get the structure of VGG. I don't want to use their pre-trained model (ImageNet?)
     vgg_model = VGGNet(pretrained = False, requires_grad=True, GPU = GPU)
+    
+    # Get the structure of FCN8 decoder. 
     fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class)
     
-    vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
-    fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
-    
-    print('Using '+bu.just_filename(bu,vggname)+' and '+\
-          bu.just_filename(bu,fcnname)+'...')
-    
-    vgg_model.load_state_dict(torch.load(vggname))
-    fcn_model.load_state_dict(torch.load(fcnname))
+    if vggname is None:
+        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
+    if fcnname is None:
+        fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
+        
+    if load_encoder:
+        print('Loading encoder state from '+bu.just_filename(bu,vggname)+'...')
+        vgg_model.load_state_dict(torch.load(vggname))
+    else:
+        print('Not loading encoder state...')
 
+    if load_decoder:
+        print('Loading decoder state from '+bu.just_filename(bu,fcnname)+'...')
+        fcn_model.load_state_dict(torch.load(fcnname))
+    else:
+        print('Not loading decoder state...')
+
+    return fcn_model
