@@ -624,13 +624,16 @@ class dlTile(DLDB):
         self.segment = corner[2]
         self.sourcefile = super().just_filename(currentFile)
         
-    def show(self):
-#            plt.close()
-#            plt.figure()
-#            plt.clf()
-        plt.imshow(self.data)
-        plt.title(super().just_filename(self.sourcefile)+ ': ' + str(self.origin))
-        plt.show()
+    def show(self, ax = None):
+        doShow = False
+        if ax is None:
+            ax = plt
+            doShow = True
+        ax.imshow(self.data)
+        title = super().just_filename(self.sourcefile)+ ': ' + str(self.origin)
+        ax.set_title(title)
+        if doShow:
+            ax.show()
        
     def get_metadata(self,key=None):
         with envr.begin(write=False) as txn:
