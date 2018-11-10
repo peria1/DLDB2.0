@@ -72,29 +72,17 @@ class Model:
     def display_feature(self,v):
         picked_module_name = v.get()
         
-#        for i,n in enumerate(self.module_names):
-#            print(i,type(v.get()) is type(n))
         pick = [i for i,n in enumerate(self.module_names)\
                 if n == picked_module_name]
         print(self.module_names[pick[0]])
         
-        handle = self.modules[pick[0]].register_forward_hook(lambda x,y,z: print('Hello, world!'))
+#        handle = self.modules[pick[0]].register_forward_hook(lambda x,y,z: print(y[0].size()))
+        handle = self.modules[pick[0]].register_forward_hook(feature_hook)
         self.model(self.input)
         handle.remove()
-        
-#    handle.remove()
-#    output = model(indata)
-#    handle = mmod[pick[0]].register_forward_hook(lambda x,y,z: print('Hello, world!'))
-#    output = model(indata)
 
-
-    def feature_hook(self, input, output):
-        print(input.size)
-        
-#    def calculate(self):
-#        x, y = np.meshgrid(np.linspace(-5, 5, self.xpoint), np.linspace(-5, 5, self.ypoint))
-#        z = np.cos(x ** 2 * y ** 3)
-#        self.res = {"x": x, "y": y, "z": z}
+def feature_hook(self, input, output):
+    print(input[0].size())
 
 #class FeatureExtractor(nn.Module):
 #    def __init__(self, submodule, extracted_layers):
