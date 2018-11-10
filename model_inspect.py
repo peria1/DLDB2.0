@@ -80,9 +80,71 @@ class Model:
         handle = self.modules[pick[0]].register_forward_hook(feature_hook)
         self.model(self.input)
         handle.remove()
-
+#
+#def factors(n):
+#    return set(
+#        factor for i in range(1, int(n**0.5) + 1) if n % i == 0
+#        for factor in (i, n//i)
+#    )
+#
+#
+#from functools import reduce
+#
+#def factors(n):    
+#    return set(reduce(list.__add__, 
+#                ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0)))
+#    
+    
 def feature_hook(self, input, output):
+    from sympy import factorint
+    import itertools 
+    import matplotlib.pyplot as plt
+    
     print(input[0].size())
+    
+    feat = input[0].cpu().detach().numpy()
+    nexamp,ndepth,nx,ny = feat.shape
+    
+    # find nearly square factors to cover depth
+    pfd = factorint(ndepth)
+    f = []
+    for key,val in pfd.items():
+        f.append([key]*val)
+    f=list(itertools.chain.from_iterable(f))
+    f.sort()
+    prod = 1
+    pmax = ndepth**0.5
+    for pf in f:
+        if prod*pf < pmax:
+            prod *= pf
+        else:
+            nrows = prod
+            ncols = int(ndepth/nrows)
+            break
+        
+    assert(nx==ny)
+    sqsize = nx
+    brdr = 1
+    disp = 1 + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
+    A = np.zeros((nexamp,ndepth,sqsize,sqsize))
+    
+    for examp in range(nexamp):
+        for i in range(ndepth):
+            irow = i // ncols 
+            icol = i %  ncols
+            r0 = (sqsize+brdr)*irow
+            r1 = r0 + sqsize
+            c0 = (sqsize+brdr)*icol
+            c1 = c0 + sqsize
+#            print(i,r0,r1,c0,c1)
+            disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
+            drange = np.max(disp[examp,:,:])-np.min(disp[examp,:,:])
+            A[examp,i,:] = feat[examp,i,:,:]
+            
+        plt.imshow((disp[examp,:,:]-np.min(disp[examp,:,:]))/drange)
+        plt.pause(.5)
+        
+ 
 
 #class FeatureExtractor(nn.Module):
 #    def __init__(self, submodule, extracted_layers):
