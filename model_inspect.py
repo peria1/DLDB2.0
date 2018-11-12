@@ -28,7 +28,7 @@ class Model:
         #
         import fcn
         
-        self.batch_size = 20
+        self.batch_size = 1
         self.GPU = True
 
         pth = '/media/bill/Windows1/Users/'+\
@@ -80,54 +80,26 @@ class Model:
         handle = self.modules[pick[0]].register_forward_hook(feature_hook)
         self.model(self.input)
         handle.remove()
-#
-#def factors(n):
-#    return set(
-#        factor for i in range(1, int(n**0.5) + 1) if n % i == 0
-#        for factor in (i, n//i)
-#    )
-#
-#
-#from functools import reduce
-#
-#def factors(n):    
-#    return set(reduce(list.__add__, 
-#                ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0)))
-#    
     
 def feature_hook(self, input, output):
-    from sympy import factorint
-    import itertools 
     import matplotlib.pyplot as plt
-    
-    print(input[0].size())
+    plt.ion()
     
     feat = input[0].cpu().detach().numpy()
     nexamp,ndepth,nx,ny = feat.shape
     
-    # find nearly square factors to cover depth
-    pfd = factorint(ndepth)
-    f = []
-    for key,val in pfd.items():
-        f.append([key]*val)
-    f=list(itertools.chain.from_iterable(f))
-    f.sort()
-    prod = 1
-    pmax = ndepth**0.5
-    for pf in f:
-        if prod*pf < pmax:
-            prod *= pf
-        else:
-            nrows = prod
-            ncols = int(ndepth/nrows)
-            break
-        
+    # find nearly square factors to cover depth, i.e. integer factors that bracket the 
+    # square root as closely as possible.  
+    #
+    nrows, ncols = best_square(ndepth)
+           
     assert(nx==ny)
     sqsize = nx
     brdr = 1
     disp = 1 + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
     A = np.zeros((nexamp,ndepth,sqsize,sqsize))
     
+    fig = plt.figure()  # a new figure window
     for examp in range(nexamp):
         for i in range(ndepth):
             irow = i // ncols 
@@ -136,15 +108,41 @@ def feature_hook(self, input, output):
             r1 = r0 + sqsize
             c0 = (sqsize+brdr)*icol
             c1 = c0 + sqsize
-#            print(i,r0,r1,c0,c1)
             disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
             drange = np.max(disp[examp,:,:])-np.min(disp[examp,:,:])
             A[examp,i,:] = feat[examp,i,:,:]
             
-        plt.imshow((disp[examp,:,:]-np.min(disp[examp,:,:]))/drange)
+        fig.clf()
+        ax = fig.add_subplot(1, 1, 1)  # specify (nrows, ncols, axnum)
+        ax.imshow((disp[examp,:,:]-np.min(disp[examp,:,:]))/drange)
+        fig.show()
         plt.pause(.5)
+#    plt.close(fig)     
+
+def best_square(n):
+    from sympy import factorint
+    import itertools 
+            
+    # find nearly square factors to cover depth
+    pfd = factorint(n)  # the prime factors of ndepth, which is the number of feature maps
+    f = []
+    for key,val in pfd.items():   # pfd is a dictionary of factors and number of times they 
+        f.append([key]*val)       # occur, e.g. 24 -> {{2,3},{3,1}} . So expand it.... 
+    f=list(itertools.chain.from_iterable(f))  #...and then flatten it. 
+    f.sort()
+
+    prod = 1
+    pmax = int(n**0.5)
+    for pf in f:
+        if prod*pf <= pmax:
+            prod *= pf
+        else:
+            nrows = prod
+            ncols = n // nrows
+            break
         
- 
+    return nrows, ncols
+
 
 #class FeatureExtractor(nn.Module):
 #    def __init__(self, submodule, extracted_layers):
