@@ -18,9 +18,14 @@ from matplotlib.figure import Figure
 import dldb
 from dldb import dlTile
 
+IDX = 0
+class FEATURE_MAPS(list):
+    def __init__(self):
+        pass
+   
+
 
 class Model:
-    
     def __init__(self):
         #
         # Need to eventually work out of a model dictionary or some such. For
@@ -50,9 +55,14 @@ class Model:
         self.model.db = dldb.DLDB(pth)
 
         self.input = self.grab_new_batch()
+        
+    def data_for_display(self):
+        data = self.input.cpu().detach().numpy()
+        dmin = np.min(data); dmax = np.max(data)
+        data = (data - dmin)/(dmax-dmin)
+        data = np.transpose(data[IDX,:,:,:],axes=[1,2,0])
+        return data
     
-        
-        
     def get_model(self):
         return self.model
     
@@ -81,9 +91,71 @@ class Model:
         self.model(self.input)
         handle.remove()
     
+def make_feature__map_display(self, feat):
+    
+    nexamp,ndepth,nx,ny = feat.shape
+    
+    # find nearly square factors to cover depth, i.e. integer factors that bracket the 
+    # square root as closely as possible.  
+    #
+    nrows, ncols = best_square(ndepth)
+           
+    assert(nx==ny)
+    sqsize = nx
+    brdr = 1
+    disp = 1 + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
+    A = feat.copy()
+    
+    for examp in range(nexamp):
+        for i in range(ndepth):
+            irow = i // ncols 
+            icol = i %  ncols
+            r0 = (sqsize+brdr)*irow
+            r1 = r0 + sqsize
+            c0 = (sqsize+brdr)*icol
+            c1 = c0 + sqsize
+            disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
+            
+    return disp, A
+
+#------------------------
+def register_nan_checks(model):
+    def check_grad(module, grad_input, grad_output):
+        # print(module) you can add this to see that the hook is called
+        if any(np.all(np.isnan(gi.data.numpy())) for gi in grad_input if gi is not None):
+            print('NaN gradient in ' + type(module).__name__)
+    model.apply(lambda module: module.register_backward_hook(check_grad))
+#------------------------
+
+
+def capture_data(self, input, output):
+    global FEATURE_MAPS, IDX
+    
+    FEATURE_MAPS[IDX].data = output[0].cpu().detach().numpy()
+
+# DON'T EDIT THIS ONE YET!
 def feature_hook(self, input, output):
     import matplotlib.pyplot as plt
     plt.ion()
+    
+    print('Inside hook, examining self...')
+    print(' ')
+    print('type: ',type(self))
+    print(' ')
+    print('dir: ',dir(self))
+    print(' ')
+    print('_get_name: ',self._get_name())
+    print(' ')
+    print('named_modules: ', [m for m in self.named_modules()])
+    print(' ')
+    print('__repr__: ',self.__repr__())
+    print(' ')
+    print('extra_repr: ',self.extra_repr())
+    print(' ')
+#    print('named_parameters: ',[c for c in self.named_parameters()])    
+    print('type input: ',type(input))
+
+#    input[0][:,87,:,:] = 1.0
     
     feat = input[0].cpu().detach().numpy()
     nexamp,ndepth,nx,ny = feat.shape
@@ -117,7 +189,6 @@ def feature_hook(self, input, output):
         ax.imshow((disp[examp,:,:]-np.min(disp[examp,:,:]))/drange)
         fig.show()
         plt.pause(.5)
-#    plt.close(fig)     
 
 def best_square(n):
     from sympy import factorint
@@ -162,11 +233,13 @@ class View:
         self.root = root   
         self.frame = Tk.Frame(root)
         
-        self.model = model.get_model()
+        self.model = model
+        self.net = model.get_model()
         
         self.fig = Figure(figsize=(7.5, 4), dpi=80)
-        self.ax0 = self.fig.add_axes((0.05, .05, .90, .90), \
-                                     facecolor=(.75, .75, .75), frameon=False)
+        self.ax0 = self.fig.subplots(1,2)
+#        self.ax0 = self.fig.add_axes((0.05, .05, .90, .90), \
+#                                     facecolor=(.75, .75, .75), frameon=False)
         self.frame.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
  #------------------------       
         self.frame2 = Tk.Frame(root)
@@ -197,7 +270,7 @@ class View:
 #        to place the- hook. 
 
 #        optionList = tuple([key for key,item in self.model.named_parameters()])
-        optionList =[name for name, module in self.model.named_modules() \
+        optionList =[name for name, module in self.net.named_modules() \
                      if len(module._modules) == 0]
         self.v = Tk.StringVar(master=self.frame2,name="module")
         self.v.set(optionList[0])
@@ -227,11 +300,12 @@ class View:
         self.fig.canvas.draw()
 
     def plot(self, event):
-         tile = self.model.db.get_random_tile()
-         self.ax0.clear()
-         tile.show(self.ax0)
-         self.fig.canvas.draw()
-
+#        tile = self.model.db.get_random_tile()
+        self.ax0[0].clear()
+#        tile.show(self.ax0)
+        self.ax0[0].imshow(self.model.data_for_display())
+        self.fig.canvas.draw()
+        
     def quitit(self,event):
         self.root.destroy()
 
