@@ -454,9 +454,10 @@ class DLDB():
         inbatch = np.transpose(inbatch[:,:,:,0:3],axes=[0,3,1,2])
 
         if not maskfile == None:
-            return torch.from_numpy(inbatch).float(), maskbatch
+            return torch.from_numpy(inbatch).float(), \
+                    torch.from_numpy(maskbatch)
         else:
-            return torch.from_numpy(inbatch).float()
+            return torch.from_numpy(inbatch).float(), None
         
         
         

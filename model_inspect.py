@@ -54,12 +54,24 @@ class Model:
         
         self.model.db = dldb.DLDB(pth)
 
-        self.input = self.grab_new_batch()
+        self.input = self.grab_new_batch(N=[318, 376, 448, 819, 979],\
+                                         maskfile='test3_cancer.tif')
+        print(type(self.input))
         
-    def data_for_display(self):
-        data = self.input.cpu().detach().numpy()
+    def data_for_display(self, output = False):
+        if output:
+            stuff = self.model(self.input)
+        else:
+            stuff = self.input
+        
+        print(stuff.size())
+        data = stuff.cpu().detach().numpy()
+        if len(data.shape) < 4:
+            data = np.expand_dims(data,0)
+        
         dmin = np.min(data); dmax = np.max(data)
         data = (data - dmin)/(dmax-dmin)
+        print(data.shape)
         data = np.transpose(data[IDX,:,:,:],axes=[1,2,0])
         return data
     
@@ -71,10 +83,12 @@ class Model:
         if N == None:
             N=list(np.random.randint(0,size=self.batch_size,high=1260))    
 
-        indata = self.model.db.feed_pytorch(N=N)
+        indata, y = self.model.db.feed_pytorch(N=N, maskfile=maskfile)
         
         if self.GPU:
             indata = indata.cuda()
+            if y is not None:
+                y = y.cuda()
         
         
         return indata
@@ -89,7 +103,8 @@ class Model:
 #        handle = self.modules[pick[0]].register_forward_hook(lambda x,y,z: print(y[0].size()))
         handle = self.modules[pick[0]].register_forward_hook(feature_hook)
         self.model(self.input)
-        handle.remove()
+   #     handle.remove()\
+        print('Leaving hook set....')
     
 def make_feature__map_display(self, feat):
     
@@ -136,29 +151,34 @@ def capture_data(self, input, output):
 # DON'T EDIT THIS ONE YET!
 def feature_hook(self, input, output):
     import matplotlib.pyplot as plt
-    plt.ion()
+#    plt.ion()
     
-    print('Inside hook, examining self...')
-    print(' ')
-    print('type: ',type(self))
-    print(' ')
-    print('dir: ',dir(self))
-    print(' ')
-    print('_get_name: ',self._get_name())
-    print(' ')
-    print('named_modules: ', [m for m in self.named_modules()])
-    print(' ')
-    print('__repr__: ',self.__repr__())
-    print(' ')
-    print('extra_repr: ',self.extra_repr())
-    print(' ')
-#    print('named_parameters: ',[c for c in self.named_parameters()])    
-    print('type input: ',type(input))
+#    print('Inside hook, examining self...')
+#    print(' ')
+#    print('type: ',type(self))
+#    print(' ')
+#    print('dir: ',dir(self))
+#    print(' ')
+#    print('_get_name: ',self._get_name())
+#    print(' ')
+#    print('named_modules: ', [m for m in self.named_modules()])
+#    print(' ')
+#    print('__repr__: ',self.__repr__())
+#    print(' ')
+#    print('extra_repr: ',self.extra_repr())
+#    print(' ')
+##    print('named_parameters: ',[c for c in self.named_parameters()])    
+#    print('type input: ',type(input))
+#
+##    input[0][:,87,:,:] = 1.0
 
-#    input[0][:,87,:,:] = 1.0
+#    print('output size: ', output.size())
+#    print('HEY! I am zeroing feature map 222!!')
+#    input[0][:,222,:,:] = 0.0
     
     feat = input[0].cpu().detach().numpy()
     nexamp,ndepth,nx,ny = feat.shape
+    
     
     # find nearly square factors to cover depth, i.e. integer factors that bracket the 
     # square root as closely as possible.  
@@ -168,7 +188,7 @@ def feature_hook(self, input, output):
     assert(nx==ny)
     sqsize = nx
     brdr = 1
-    disp = 1 + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
+    disp = np.max(feat) + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
     A = np.zeros((nexamp,ndepth,sqsize,sqsize))
     
     fig = plt.figure()  # a new figure window
@@ -304,12 +324,13 @@ class View:
         self.ax0[0].clear()
 #        tile.show(self.ax0)
         self.ax0[0].imshow(self.model.data_for_display())
+        self.ax0[1].imshow(self.model.data_for_display(output=True))
         self.fig.canvas.draw()
         
     def quitit(self,event):
         self.root.destroy()
 
-        
+    
 class Controller:
     def __init__(self):
         self.root = Tk.Tk()
