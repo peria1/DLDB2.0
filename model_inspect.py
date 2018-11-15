@@ -61,6 +61,7 @@ class Model:
         Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
         self.input, self.masks = self.grab_new_batch(N=Nlist,\
                                          maskfile='test3_cancer.tif')
+        self.icurrent = 0
         
     def next_example(self):
         self.icurrent = (self.icurrent + 1) % self.batch_size
@@ -401,6 +402,8 @@ class View:
         self.ax0[1,0].imshow(self.model.mask_for_display())
         img_fm = self.model.feature_map_for_display()
         self.ax0[1,1].imshow(img_fm)
+        self.ax0[1,1].set_title(self.v.get())
+        self.ax0[0,0].set_title(str(self.model.icurrent))
 #        self.fig.colorbar(img_fm)
         self.fig.canvas.draw()
         
