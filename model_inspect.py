@@ -395,15 +395,15 @@ class View:
         
     def update_plots(self):
 #        tile = self.model.db.get_random_tile()
-        self.ax0[0,0].clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
+        self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
 #        tile.show(self.ax0)
-        self.ax0[0,0].imshow(self.model.data_for_display())
-        self.ax0[0,1].imshow(self.model.data_for_display(output=True))
-        self.ax0[1,0].imshow(self.model.mask_for_display())
+        self.ax1.imshow(self.model.data_for_display())
+        self.ax2.imshow(self.model.data_for_display(output=True))
+        self.ax3.imshow(self.model.mask_for_display())
         img_fm = self.model.feature_map_for_display()
-        self.ax0[1,1].imshow(img_fm)
-        self.ax0[1,1].set_title(self.v.get())
-        self.ax0[0,0].set_title(str(self.model.icurrent))
+        self.ax4.imshow(img_fm)
+        self.ax4.set_title(self.v.get())
+        self.ax1.set_title(str(self.model.icurrent))
 #        self.fig.colorbar(img_fm)
         self.fig.canvas.draw()
         
