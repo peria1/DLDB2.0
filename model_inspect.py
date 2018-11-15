@@ -143,9 +143,10 @@ class Model:
         if brdr == 0:
             brdr = 1
             
-        disp = np.max(feat) + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
+        disp = np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
         
         for examp in range(nexamp):
+            disp[examp,:,:] = np.max(feat[examp,:,:,:])
             for i in range(ndepth):
                 irow = i // ncols 
                 icol = i %  ncols
@@ -398,7 +399,9 @@ class View:
         self.ax0[0,0].imshow(self.model.data_for_display())
         self.ax0[0,1].imshow(self.model.data_for_display(output=True))
         self.ax0[1,0].imshow(self.model.mask_for_display())
-        self.ax0[1,1].imshow(self.model.feature_map_for_display())
+        img_fm = self.model.feature_map_for_display()
+        self.ax0[1,1].imshow(img_fm)
+#        self.fig.colorbar(img_fm)
         self.fig.canvas.draw()
         
     def quitit(self,event):
