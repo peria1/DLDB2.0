@@ -12,18 +12,13 @@ except ModuleNotFoundError:
 
 
 import numpy as np
-
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import dldb
 from dldb import dlTile
 
-IDX = 0
-class FEATURE_MAPS(list):
-    def __init__(self):
-        pass
-   
-
+FEATURE_MAPS = 'wtf?!'
 
 class Model:
     def __init__(self):
@@ -33,8 +28,10 @@ class Model:
         #
         import fcn
         
-        self.batch_size = 1
+        self.batch_size = 20
         self.GPU = True
+        
+        self.icurrent = 0
 
         pth = '/media/bill/Windows1/Users/'+\
         'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
@@ -52,28 +49,48 @@ class Model:
         self.modules = [module for name, module in self.model.named_modules()\
                              if len(module._modules) == 0]
         
-        self.model.db = dldb.DLDB(pth)
+        self.db = dldb.DLDB(pth)
 
-        self.input = self.grab_new_batch(N=[318, 376, 448, 819, 979],\
+#        self.input, self.masks = self.grab_new_batch(N=[318, 376, 448, 819, 979],\
+#                                         maskfile='test3_cancer.tif')
+        Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
+        self.input, self.masks = self.grab_new_batch(N=Nlist,\
                                          maskfile='test3_cancer.tif')
-        print(type(self.input))
         
+    def next_example(self):
+        self.icurrent = (self.icurrent + 1) % self.batch_size
+    def prev_example(self):
+        self.icurrent = (self.icurrent - 1) % self.batch_size
+
     def data_for_display(self, output = False):
         if output:
             stuff = self.model(self.input)
         else:
             stuff = self.input
         
-        print(stuff.size())
+#        print(stuff.size())
         data = stuff.cpu().detach().numpy()
         if len(data.shape) < 4:
             data = np.expand_dims(data,0)
         
         dmin = np.min(data); dmax = np.max(data)
         data = (data - dmin)/(dmax-dmin)
-        print(data.shape)
-        data = np.transpose(data[IDX,:,:,:],axes=[1,2,0])
+        data = np.transpose(data[self.icurrent,:,:,:],axes=[1,2,0])
         return data
+    
+    def mask_for_display(self):
+        m = self.masks[self.icurrent,0,:,:]
+        return m
+    
+    def feature_map_for_display(self):
+        global FEATURE_MAPS
+        
+        if type(FEATURE_MAPS) is not str:
+            self.make_feature_map_display(FEATURE_MAPS) 
+            fm = self.feature_display[self.icurrent,:,:]
+            return fm
+        else:
+            return np.zeros((2,2))
     
     def get_model(self):
         return self.model
@@ -83,15 +100,14 @@ class Model:
         if N == None:
             N=list(np.random.randint(0,size=self.batch_size,high=1260))    
 
-        indata, y = self.model.db.feed_pytorch(N=N, maskfile=maskfile)
+        indata, y = self.db.feed_pytorch(N=N, maskfile=maskfile)
         
         if self.GPU:
             indata = indata.cuda()
             if y is not None:
                 y = y.cuda()
         
-        
-        return indata
+        return indata, y
 
     def display_feature(self,v):
         picked_module_name = v.get()
@@ -101,38 +117,38 @@ class Model:
         print(self.module_names[pick[0]])
         
 #        handle = self.modules[pick[0]].register_forward_hook(lambda x,y,z: print(y[0].size()))
-        handle = self.modules[pick[0]].register_forward_hook(feature_hook)
+#        handle = self.modules[pick[0]].register_forward_hook(feature_hook)
+        handle = self.modules[pick[0]].register_forward_hook(capture_data)
         self.model(self.input)
-   #     handle.remove()\
-        print('Leaving hook set....')
+        handle.remove()
+#        print('Leaving hook set....')
     
-def make_feature__map_display(self, feat):
+    def make_feature_map_display(self, feat):
+        
+        nexamp,ndepth,nx,ny = feat.shape
+        
+        # find nearly square factors to cover depth, i.e. integer factors that bracket the 
+        # square root as closely as possible.  
+        #
+        nrows, ncols = best_square(ndepth)
+               
+        assert(nx==ny)
+        sqsize = nx
+        brdr = 1
+        disp = 1 + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
+        
+        for examp in range(nexamp):
+            for i in range(ndepth):
+                irow = i // ncols 
+                icol = i %  ncols
+                r0 = (sqsize+brdr)*irow
+                r1 = r0 + sqsize
+                c0 = (sqsize+brdr)*icol
+                c1 = c0 + sqsize
+                disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
+                
+        self.feature_display = disp
     
-    nexamp,ndepth,nx,ny = feat.shape
-    
-    # find nearly square factors to cover depth, i.e. integer factors that bracket the 
-    # square root as closely as possible.  
-    #
-    nrows, ncols = best_square(ndepth)
-           
-    assert(nx==ny)
-    sqsize = nx
-    brdr = 1
-    disp = 1 + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
-    A = feat.copy()
-    
-    for examp in range(nexamp):
-        for i in range(ndepth):
-            irow = i // ncols 
-            icol = i %  ncols
-            r0 = (sqsize+brdr)*irow
-            r1 = r0 + sqsize
-            c0 = (sqsize+brdr)*icol
-            c1 = c0 + sqsize
-            disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
-            
-    return disp, A
-
 #------------------------
 def register_nan_checks(model):
     def check_grad(module, grad_input, grad_output):
@@ -145,8 +161,8 @@ def register_nan_checks(model):
 
 def capture_data(self, input, output):
     global FEATURE_MAPS, IDX
-    
-    FEATURE_MAPS[IDX].data = output[0].cpu().detach().numpy()
+    print('Hooked!')
+    FEATURE_MAPS = output.cpu().detach().numpy()
 
 # DON'T EDIT THIS ONE YET!
 def feature_hook(self, input, output):
@@ -173,8 +189,11 @@ def feature_hook(self, input, output):
 ##    input[0][:,87,:,:] = 1.0
 
 #    print('output size: ', output.size())
-#    print('HEY! I am zeroing feature map 222!!')
+    print('HEY! I am zeroing feature map 222!!')
 #    input[0][:,222,:,:] = 0.0
+    output[:,222,:,:]=0
+    
+    print(output.size())
     
     feat = input[0].cpu().detach().numpy()
     nexamp,ndepth,nx,ny = feat.shape
@@ -257,7 +276,7 @@ class View:
         self.net = model.get_model()
         
         self.fig = Figure(figsize=(7.5, 4), dpi=80)
-        self.ax0 = self.fig.subplots(1,2)
+        self.ax0 = self.fig.subplots(2,2)
 #        self.ax0 = self.fig.add_axes((0.05, .05, .90, .90), \
 #                                     facecolor=(.75, .75, .75), frameon=False)
         self.frame.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
@@ -307,6 +326,13 @@ class View:
         self.paramMenu = Tk.OptionMenu(self.frame2, self.v, *optionList)
         self.paramMenu.pack(side="top",fill=Tk.BOTH)
                 
+        self.nextButton = Tk.Button(self.frame2, text="Next")
+        self.nextButton.pack(side="top", fill=Tk.BOTH)
+        self.nextButton.bind("<Button>", self.next)
+        self.prevButton = Tk.Button(self.frame2, text="Prev")
+        self.prevButton.pack(side="top", fill=Tk.BOTH)
+        self.prevButton.bind("<Button>", self.prev)
+
         self.quitButton = Tk.Button(self.frame2, text="Quit")
         self.quitButton.pack(side="top", fill=Tk.BOTH)
         self.quitButton.bind("<Button>", self.quitit)
@@ -315,16 +341,26 @@ class View:
         self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
         self.canvas.draw()
 
+    def next(self, event):
+        self.model.next_example()
+        self.plot(event)
+
+    def prev(self, event):
+        self.model.prev_example()
+        self.plot(event)
+        
     def clear(self, event):
         self.ax0.clear()
         self.fig.canvas.draw()
 
     def plot(self, event):
 #        tile = self.model.db.get_random_tile()
-        self.ax0[0].clear()
+        self.ax0[0,0].clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
 #        tile.show(self.ax0)
-        self.ax0[0].imshow(self.model.data_for_display())
-        self.ax0[1].imshow(self.model.data_for_display(output=True))
+        self.ax0[0,0].imshow(self.model.data_for_display())
+        self.ax0[0,1].imshow(self.model.data_for_display(output=True))
+        self.ax0[1,0].imshow(self.model.mask_for_display())
+        self.ax0[1,1].imshow(self.model.feature_map_for_display())
         self.fig.canvas.draw()
         
     def quitit(self,event):
