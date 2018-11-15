@@ -358,9 +358,9 @@ class View:
         self.prevButton.pack(side="top", fill=Tk.BOTH)
         self.prevButton.bind("<Button>", self.prev)
 
-#        self.grabButton = Tk.Button(self.frame2, text="New Data")
-#        self.grabButton.pack(side="top", fill=Tk.BOTH)
-#        self.grabButton.bind("<Button>", self.grab)
+        self.grabButton = Tk.Button(self.frame2, text="New Data")
+        self.grabButton.pack(side="top", fill=Tk.BOTH)
+        self.grabButton.bind("<Button>", self.grab)
 
         self.quitButton = Tk.Button(self.frame2, text="Quit")
         self.quitButton.pack(side="top", fill=Tk.BOTH)
@@ -380,8 +380,9 @@ class View:
         self.model.prev_example()
         self.plot(event)
     
-#    def grab(self, event):
-#        self.model.get_new_data()
+    def grab(self, event):
+        self.model.get_new_data()
+        self.update_plots()
     
     def clear(self, event):
         self.ax0.clear()
