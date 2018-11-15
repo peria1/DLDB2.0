@@ -15,6 +15,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import matplotlib.gridspec as gridspec
+
 import dldb
 from dldb import dlTile
 
@@ -278,6 +280,7 @@ def best_square(n):
 #
 
 class View:
+
     def __init__(self, root, model):
         self.root = root   
         self.frame = Tk.Frame(root)
@@ -287,7 +290,19 @@ class View:
         
 #        self.fig = Figure(figsize=(7.5, 4), dpi=80) # original
         self.fig = Figure(figsize=(16, 8), dpi=80)
-        self.ax0 = self.fig.subplots(2,2)
+        gs = gridspec.GridSpec(3,3)
+        self.ax1 = self.fig.add_subplot(gs[0,0])
+        self.ax2 = self.fig.add_subplot(gs[0,1])
+        self.ax3 = self.fig.add_subplot(gs[0,2])
+        self.ax4 = self.fig.add_subplot(gs[1:,0:])
+        
+#        def process_button(event):
+#            print("Button:", event.x, event.y, event.xdata, event.ydata, event.button)
+#
+##        fig.canvas.mpl_connect('key_press_event', process_key)
+#        self.fig.canvas.mpl_connect('button_press_event', process_button)
+
+#        self.ax0 = self.fig.subplots(3,3)
 #        self.ax0 = self.fig.add_axes((0.05, .05, .90, .90), \
 #                                     facecolor=(.75, .75, .75), frameon=False)
         self.frame.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
