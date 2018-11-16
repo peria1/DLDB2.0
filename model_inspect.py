@@ -23,15 +23,15 @@ from dldb import dlTile
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
 class Model:
-    def __init__(self):
+    def __init__(self,batch_size=20,GPU=True):
         #
         # Need to eventually work out of a model dictionary or some such. For
         #  now, boneheaded hard-coded paths will have to do. 
         #
         import fcn
         
-        self.batch_size = 20
-        self.GPU = True
+        self.batch_size = batch_size
+        self.GPU = GPU
         
         self.icurrent = 0
 
@@ -56,10 +56,13 @@ class Model:
 #        self.input, self.masks = self.grab_new_batch(N=[318, 376, 448, 819, 979],\
 #                                         maskfile='test3_cancer.tif')
 
-        self.get_new_data()
+        self.get_new_data() # sets self.input and self.masks 
         
         self.selected_feature_maps = None
+        self.viewers = []
 
+    def add_viewer(self,v):
+        self.viewers.append(v)
         
     def get_new_data(self):
         Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
@@ -194,89 +197,15 @@ class Model:
             print('You clicked feature map number: ',ifm)
             highlight_border(ifm)
             
+            
 
                 
         self.feature_display = disp
-    
-#------------------------
-def register_nan_checks(model):
-    def check_grad(module, grad_input, grad_output):
-        # print(module) you can add this to see that the hook is called
-        if any(np.all(np.isnan(gi.data.numpy())) for gi in grad_input if gi is not None):
-            print('NaN gradient in ' + type(module).__name__)
-    model.apply(lambda module: module.register_backward_hook(check_grad))
-#------------------------
-
 
 def capture_data(self, input, output):
     global FEATURE_MAPS, IDX
     print('Hooked!')
     FEATURE_MAPS = output.cpu().detach().numpy()
-
-# DON'T EDIT THIS ONE YET!
-def feature_hook(self, input, output):
-    import matplotlib.pyplot as plt
-#    plt.ion()
-    
-#    print('Inside hook, examining self...')
-#    print(' ')
-#    print('type: ',type(self))
-#    print(' ')
-#    print('dir: ',dir(self))
-#    print(' ')
-#    print('_get_name: ',self._get_name())
-#    print(' ')
-#    print('named_modules: ', [m for m in self.named_modules()])
-#    print(' ')
-#    print('__repr__: ',self.__repr__())
-#    print(' ')
-#    print('extra_repr: ',self.extra_repr())
-#    print(' ')
-##    print('named_parameters: ',[c for c in self.named_parameters()])    
-#    print('type input: ',type(input))
-#
-##    input[0][:,87,:,:] = 1.0
-
-#    print('output size: ', output.size())
-    print('HEY! I am zeroing feature map 222!!')
-#    input[0][:,222,:,:] = 0.0
-    output[:,222,:,:]=0
-    
-    print(output.size())
-    
-    feat = input[0].cpu().detach().numpy()
-    nexamp,ndepth,nx,ny = feat.shape
-    
-    
-    # find nearly square factors to cover depth, i.e. integer factors that bracket the 
-    # square root as closely as possible.  
-    #
-    nrows, ncols = best_square(ndepth)
-           
-    assert(nx==ny)
-    sqsize = nx
-    brdr = 1
-    disp = np.max(feat) + np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
-    A = np.zeros((nexamp,ndepth,sqsize,sqsize))
-    
-    fig = plt.figure()  # a new figure window
-    for examp in range(nexamp):
-        for i in range(ndepth):
-            irow = i // ncols 
-            icol = i %  ncols
-            r0 = (sqsize+brdr)*irow
-            r1 = r0 + sqsize
-            c0 = (sqsize+brdr)*icol
-            c1 = c0 + sqsize
-            disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
-            drange = np.max(disp[examp,:,:])-np.min(disp[examp,:,:])
-            A[examp,i,:] = feat[examp,i,:,:]
-            
-        fig.clf()
-        ax = fig.add_subplot(1, 1, 1)  # specify (nrows, ncols, axnum)
-        ax.imshow((disp[examp,:,:]-np.min(disp[examp,:,:]))/drange)
-        fig.show()
-        plt.pause(.5)
 
 def best_square(n):
     from sympy import factorint
@@ -492,6 +421,7 @@ class Controller:
         self.root = Tk.Tk()
         self.model = Model()
         self.view = View(self.root, self.model)
+        self.model
 
     def run(self):
         self.root.title("Model Inspector")
