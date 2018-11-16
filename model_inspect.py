@@ -57,6 +57,8 @@ class Model:
 #                                         maskfile='test3_cancer.tif')
 
         self.get_new_data()
+        
+        self.selected_feature_maps = None
 
         
     def get_new_data(self):
@@ -148,15 +150,40 @@ class Model:
             
         disp = np.zeros((nexamp,nrows*(sqsize+brdr),ncols*(sqsize+brdr)))
         
+        def get_feature_corners(i):
+            irow = i // ncols 
+            icol = i %  ncols
+            r0 = (sqsize+brdr)*irow
+            r1 = r0 + sqsize
+            c0 = (sqsize+brdr)*icol
+            c1 = c0 + sqsize
+            return r0,r1,c0,c1
+
+        def highlight_border(i):
+            r0,r1,c0,c1 = get_feature_corners(i)
+            tall_top = r0
+            tall_bottom = tall_top + sqsize + brdr
+            tall_left = c1
+            tall_right = tall_left + brdr
+            
+            fat_top = r1
+            fat_bottom = fat_top + brdr
+            fat_right = c1
+            fat_left = fat_right - sqsize
+            print('setting border to zero for feature',i)
+            print('fat LRTB: ',fat_left,fat_right,fat_top,fat_bottom)
+            print('tall LRTB: ',tall_left,tall_right,tall_top,tall_bottom)
+            
+#            print(disp[:, fat_top :fat_bottom,  fat_left :fat_right])
+#            disp[:, fat_top :fat_bottom,  fat_left :fat_right] = 0
+#            disp[:, tall_top:tall_bottom, tall_left:tall_right] = 0
+#            print(disp[:, fat_top :fat_bottom,  fat_left :fat_right])
+
+        print('about to initialize disp...')    
         for examp in range(nexamp):
-            disp[examp,:,:] = np.max(feat[examp,:,:,:])
+            disp[examp,:,:] = np.max(feat[examp,:,:,:]) # per example, for max contrast
             for i in range(ndepth):
-                irow = i // ncols 
-                icol = i %  ncols
-                r0 = (sqsize+brdr)*irow
-                r1 = r0 + sqsize
-                c0 = (sqsize+brdr)*icol
-                c1 = c0 + sqsize
+                r0,r1,c0,c1 = get_feature_corners(i)
                 disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
                 
         if point_clicked is not None:
@@ -165,6 +192,8 @@ class Model:
             ifm2 = int(np.floor(px/(sqsize+brdr)))
             ifm = ifm1 + ifm2
             print('You clicked feature map number: ',ifm)
+            highlight_border(ifm)
+            
 
                 
         self.feature_display = disp
@@ -351,7 +380,7 @@ class View:
         optionList =[name for name, module in self.net.named_modules() \
                      if len(module._modules) == 0]
         self.v = Tk.StringVar(master=self.frame2,name="module")
-        self.v.set(optionList[0])
+        self.v.set('not set')
         #
 #        def callback2(*_, var=self.v):
 #            model.display_feature(var)
@@ -404,7 +433,7 @@ class View:
             
         
         def process_button(event):
-            print('processing button...')
+#            print('processing button...')
             point = (event.x, event.y)
 #            for ax in axes:
 #                print(ax.contains_point(point))
