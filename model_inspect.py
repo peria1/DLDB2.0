@@ -131,7 +131,7 @@ class Model:
         handle.remove()
 #        print('Leaving hook set....')
     
-    def make_feature_map_display(self, feat):
+    def make_feature_map_display(self, feat, point_clicked = None):
         
         nexamp,ndepth,nx,ny = feat.shape
         
@@ -158,6 +158,14 @@ class Model:
                 c0 = (sqsize+brdr)*icol
                 c1 = c0 + sqsize
                 disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
+                
+        if point_clicked is not None:
+            px, py = point_clicked
+            ifm1 = int(np.floor(py/(sqsize+brdr))*ncols)
+            ifm2 = int(np.floor(px/(sqsize+brdr)))
+            ifm = ifm1 + ifm2
+            print('You clicked feature map number: ',ifm)
+
                 
         self.feature_display = disp
     
@@ -296,6 +304,10 @@ class View:
         self.ax3 = self.fig.add_subplot(gs[0,2])
         self.ax4 = self.fig.add_subplot(gs[1:,0:])
         
+        axes = [self.ax1, self.ax2, self.ax3, self.ax4 ]
+        
+        
+        
 #        def process_button(event):
 #            print("Button:", event.x, event.y, event.xdata, event.ydata, event.button)
 #
@@ -387,6 +399,26 @@ class View:
         self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
         self.canvas.draw()
         
+        def highlight_feature(self, dpoint):
+            x, y = dpoint
+            
+        
+        def process_button(event):
+            print('processing button...')
+            point = (event.x, event.y)
+#            for ax in axes:
+#                print(ax.contains_point(point))
+
+            datapoint = (event.xdata, event.ydata)
+            if self.ax4.contains_point(point):
+#                print('...right axes...')
+                if type(FEATURE_MAPS) is not str:
+#                    print('...FEATURE_MAPS are ready...')
+                    model.make_feature_map_display(FEATURE_MAPS, point_clicked = datapoint)
+
+        self.fig.canvas.mpl_connect('button_press_event', process_button)
+
+
         self.update_plots()
 
     def next(self, event):
