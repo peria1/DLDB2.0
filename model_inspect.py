@@ -24,6 +24,7 @@ import dldb
 from dldb import dlTile
 
 import torch
+import copy
 
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
@@ -57,11 +58,9 @@ class Model:
                              if len(module._modules) == 0]
         
         self.param_list = torch.nn.ParameterList(param for param in self.net.parameters())
-        
+        self.param_list_copy = copy.copy(self.param_list)
         self.db = dldb.DLDB(pth)
 
-#        self.input, self.masks = self.grab_new_batch(N=[318, 376, 448, 819, 979],\
-#                                         maskfile='test3_cancer.tif')
 
         self.get_new_data() # sets self.input and self.masks 
         
@@ -91,66 +90,35 @@ class Model:
         picked_module_name = v.get()
         pick = [i for i,n in enumerate(self.module_names)\
                 if n == picked_module_name][0]
-
-#        print('MAD of weight is ',np.mean(np.abs(self.modules[pick].weight.cpu().detach().numpy())))
-#        print('MAD of bias is ',np.mean(np.abs(self.modules[pick].bias.cpu().detach().numpy())))
-
-#        print('Setting all maps to zero in ', picked_module_name)
         
         print(self.modules[pick])
         mp = self.modules[pick]
         print(mp)
-        
-#        print(self.modules[pick].weight.size())
-        
+                
         param_names = [name for name,param in self.net.named_parameters()]
         wpick = [i for i,n in enumerate(param_names)\
                  if n == picked_module_name + '.weight'][0]
         bpick = [i for i,n in enumerate(param_names)\
                  if n == picked_module_name + '.bias'][0]
         
+        self.param_list = copy.copy(self.param_list_copy)
+
         params = self.param_list
         weight_picked = params[wpick]
         bias_picked = params[bpick]
-                
-#        pw = [param for name,param in self.net.named_parameters() \
-#              if name == picked_module_name + '.weight'][0]
-#        pb = [param for name,param in self.net.named_parameters() \
-#              if name == picked_module_name + '.bias'][0]
         
         print('training is: ',self.net.training)
         out0 = self.get_data_for_display(output=True)
         for fmap in self.selected_feature_maps:
-#            self.modules[pick].weight[:,fmap,:,:]=0.0
-#        for fmap in range(self.modules[pick].weight.size()[1]):
-#            self.modules[pick].weight[:,fmap,:,:]=0.0
-#            self.modules[pick].bias[fmap] = 0.0
+            print(fmap)
             weight_picked[fmap,:,:,:] = 0.0
             bias_picked[fmap] = 0.0
-         #   param_picked.bias[fmap] = 0.0
+
         out1 = self.get_data_for_display(output=True)
         print('Change: ',np.sum(np.abs(out1-out0)))
-            
-#        self.modules[pick].weight[:,:,:,:]=0.0
-#        self.modules[pick].bias[:] = 0.0
-#        print(np.sum(np.abs(pw.cpu().detach().numpy())))
-#        print(np.sum(np.abs(pb.cpu().detach().numpy())))
-#        print(np.sum(np.abs(mp.weight.cpu().detach().numpy())))
-#        print(np.sum(np.abs(mp.bias.cpu().detach().numpy())))
-        
-#        fmap = self.selected_feature_maps[0]
-#        print(np.sum(np.abs(self.modules[pick].weight.cpu().detach().numpy()[fmap,:,:,:])))
-#        print(np.sum(np.abs(self.modules[pick].bias.cpu().detach().numpy()[fmap])))
 
-#        handle = self.modules[pick[0]].register_forward_hook(zero_hook)
-#        IDX = self.selected_feature_maps
-#        print(id(self.modules[pick]))
-#        print(id(mp))
-#        print(id(param_picked))
-        
         self.net(self.input)
         self.update_viewers()
-#        handle.remove()
 
 
     def get_data_for_display(self, output = False):
@@ -159,7 +127,6 @@ class Model:
         else:
             stuff = self.input
         
-#        print(stuff.size())
         data = stuff.cpu().detach().numpy()
         if len(data.shape) < 4:
             data = np.expand_dims(data,0)
@@ -207,18 +174,9 @@ class Model:
                 if n == picked_module_name]
         print(self.module_names[pick[0]])
         
-#        handle = self.modules[pick[0]].register_forward_hook(lambda x,y,z: print(y[0].size()))
-#        handle = self.modules[pick[0]].register_forward_hook(feature_hook)
         handle = self.modules[pick[0]].register_forward_hook(capture_data_hook)
-#        hthis = self.modules[pick[0]].register_forward_hook(summary_hook)
-#        hnext = self.modules[pick[0]+1].register_forward_hook(summary_hook)
         self.net(self.input)
-#        print('not removing hooks!!!')
         handle.remove()
-#        hthis.remove()
-#        hnext.remove()
-        
-#        print('Leaving hook set....')
     
     def make_feature_map_display(self, feat, point_clicked = None):
         
@@ -257,14 +215,9 @@ class Model:
             fat_bottom = fat_top + brdr
             fat_right = c1
             fat_left = fat_right - sqsize
-#            print('setting border to zero for feature',i)
-#            print('fat LRTB: ',fat_left,fat_right,fat_top,fat_bottom)
-#            print('tall LRTB: ',tall_left,tall_right,tall_top,tall_bottom)
-#            
-#            print(disp[:, fat_top :fat_bottom,  fat_left :fat_right])
+
             disp[:, fat_top :fat_bottom,  fat_left :fat_right] = 0
             disp[:, tall_top:tall_bottom, tall_left:tall_right] = 0
-#            print(disp[:, fat_top :fat_bottom,  fat_left :fat_right])
 
         print('about to initialize disp...')    
         for examp in range(nexamp):
@@ -356,19 +309,6 @@ class View:
         self.ax3 = self.fig.add_subplot(gs[0,2])
         self.ax4 = self.fig.add_subplot(gs[1:,0:])
         
-#        axes = [self.ax1, self.ax2, self.ax3, self.ax4 ]
-        
-        
-        
-#        def process_button(event):
-#            print("Button:", event.x, event.y, event.xdata, event.ydata, event.button)
-#
-##        fig.canvas.mpl_connect('key_press_event', process_key)
-#        self.fig.canvas.mpl_connect('button_press_event', process_button)
-
-#        self.ax0 = self.fig.subplots(3,3)
-#        self.ax0 = self.fig.add_axes((0.05, .05, .90, .90), \
-#                                     facecolor=(.75, .75, .75), frameon=False)
         self.frame.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
 
  #------------------------       
@@ -404,18 +344,6 @@ class View:
                      if len(module._modules) == 0]
         self.v = Tk.StringVar(master=self.frame2,name="module")
         self.v.set('not set')
-        #
-#        def callback2(*_, var=self.v):
-#            model.set_feature_map_hook(var)
-#            crap = lambda *_ : self.plot()
-#            crap(*_)
-#            print('I can do two things..')
-#            
-#        def callback3(self, n,m,x, var=self.v):
-#            model.set_feature_map_hook(var)
-#            self.update_plots()
-#            print('I could do three things..')
-#
         # In the next line, "callback" is the name of the function that is 
         #   called when v is changed, i.e. when the user picks a new option from 
         #   paramMenu. It has to be a lambda (an anonymous function) to accomodate
@@ -458,16 +386,10 @@ class View:
         self.canvas.draw()
                 
         def process_button(event):
-#            print('processing button...')
             point = (event.x, event.y)
-#            for ax in axes:
-#                print(ax.contains_point(point))
-
             datapoint = (event.xdata, event.ydata)
             if self.ax4.contains_point(point):
-#                print('...right axes...')
                 if type(FEATURE_MAPS) is not str:
-#                    print('...FEATURE_MAPS are ready...')
                     model.make_feature_map_display(FEATURE_MAPS, point_clicked = datapoint)
                     model.update_viewers()
 
@@ -499,9 +421,7 @@ class View:
         self.update_plots()
         
     def update_plots(self):
-#        tile = self.model.db.get_random_tile()
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
-#        tile.show(self.ax0)
         self.ax1.imshow(self.model.get_data_for_display())
         self.ax2.imshow(self.model.get_data_for_display(output=True))
         self.ax3.imshow(self.model.get_mask_for_display())
@@ -509,7 +429,6 @@ class View:
         self.ax4.imshow(img_fm)
         self.ax4.set_title(self.v.get())
         self.ax1.set_title(str(self.model.icurrent))
-#        self.fig.colorbar(img_fm)
         self.fig.canvas.draw()
         
     def quitit(self,event):
