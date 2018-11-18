@@ -56,6 +56,8 @@ class Model:
         self.modules = [module for name, module in self.net.named_modules()\
                              if len(module._modules) == 0]
         
+        self.param_list = torch.nn.ParameterList(param for param in self.net.parameters())
+        
         self.db = dldb.DLDB(pth)
 
 #        self.input, self.masks = self.grab_new_batch(N=[318, 376, 448, 819, 979],\
@@ -65,6 +67,7 @@ class Model:
         
         self.selected_feature_maps = []
         self.viewers = []
+        
         
     def update_viewers(self):
         for v in self.viewers:
@@ -89,30 +92,31 @@ class Model:
         pick = [i for i,n in enumerate(self.module_names)\
                 if n == picked_module_name][0]
 
-        print('MAD of weight is ',np.mean(np.abs(self.modules[pick].weight.cpu().detach().numpy())))
-        print('MAD of bias is ',np.mean(np.abs(self.modules[pick].bias.cpu().detach().numpy())))
+#        print('MAD of weight is ',np.mean(np.abs(self.modules[pick].weight.cpu().detach().numpy())))
+#        print('MAD of bias is ',np.mean(np.abs(self.modules[pick].bias.cpu().detach().numpy())))
 
-        print('Setting all maps to zero in ', picked_module_name)
+#        print('Setting all maps to zero in ', picked_module_name)
         
         print(self.modules[pick])
         mp = self.modules[pick]
         print(mp)
         
-        print(self.modules[pick].weight.size())
+#        print(self.modules[pick].weight.size())
         
         param_names = [name for name,param in self.net.named_parameters()]
-        ppick = [i for i,n in enumerate(param_names)\
+        wpick = [i for i,n in enumerate(param_names)\
                  if n == picked_module_name + '.weight'][0]
+        bpick = [i for i,n in enumerate(param_names)\
+                 if n == picked_module_name + '.bias'][0]
         
-        params = torch.nn.ParameterList(param for param in self.net.parameters())
-        param_picked = params[ppick]
-        print(param_picked.size())
-        
-        
-        pw = [param for name,param in self.net.named_parameters() \
-              if name == picked_module_name + '.weight'][0]
-        pb = [param for name,param in self.net.named_parameters() \
-              if name == picked_module_name + '.bias'][0]
+        params = self.param_list
+        weight_picked = params[wpick]
+        bias_picked = params[bpick]
+                
+#        pw = [param for name,param in self.net.named_parameters() \
+#              if name == picked_module_name + '.weight'][0]
+#        pb = [param for name,param in self.net.named_parameters() \
+#              if name == picked_module_name + '.bias'][0]
         
         print('training is: ',self.net.training)
         out0 = self.get_data_for_display(output=True)
@@ -121,27 +125,28 @@ class Model:
 #        for fmap in range(self.modules[pick].weight.size()[1]):
 #            self.modules[pick].weight[:,fmap,:,:]=0.0
 #            self.modules[pick].bias[fmap] = 0.0
-            param_picked[fmap,:,:,:]=0.0
+            weight_picked[fmap,:,:,:] = 0.0
+            bias_picked[fmap] = 0.0
          #   param_picked.bias[fmap] = 0.0
         out1 = self.get_data_for_display(output=True)
         print('Change: ',np.sum(np.abs(out1-out0)))
             
 #        self.modules[pick].weight[:,:,:,:]=0.0
 #        self.modules[pick].bias[:] = 0.0
-        print(np.sum(np.abs(pw.cpu().detach().numpy())))
-        print(np.sum(np.abs(pb.cpu().detach().numpy())))
-        print(np.sum(np.abs(mp.weight.cpu().detach().numpy())))
-        print(np.sum(np.abs(mp.bias.cpu().detach().numpy())))
+#        print(np.sum(np.abs(pw.cpu().detach().numpy())))
+#        print(np.sum(np.abs(pb.cpu().detach().numpy())))
+#        print(np.sum(np.abs(mp.weight.cpu().detach().numpy())))
+#        print(np.sum(np.abs(mp.bias.cpu().detach().numpy())))
         
-        fmap = self.selected_feature_maps[0]
-        print(np.sum(np.abs(self.modules[pick].weight.cpu().detach().numpy()[fmap,:,:,:])))
-        print(np.sum(np.abs(self.modules[pick].bias.cpu().detach().numpy()[fmap])))
+#        fmap = self.selected_feature_maps[0]
+#        print(np.sum(np.abs(self.modules[pick].weight.cpu().detach().numpy()[fmap,:,:,:])))
+#        print(np.sum(np.abs(self.modules[pick].bias.cpu().detach().numpy()[fmap])))
 
 #        handle = self.modules[pick[0]].register_forward_hook(zero_hook)
 #        IDX = self.selected_feature_maps
-        print(id(self.modules[pick]))
-        print(id(mp))
-        print(id(param_picked))
+#        print(id(self.modules[pick]))
+#        print(id(mp))
+#        print(id(param_picked))
         
         self.net(self.input)
         self.update_viewers()
