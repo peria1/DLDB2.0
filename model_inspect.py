@@ -5,6 +5,8 @@ Created on Wed Nov  7 15:47:26 2018
 
 @author: bill
 """
+
+
 try:
     import Tkinter as Tk # python 2
 except ModuleNotFoundError:
@@ -16,9 +18,12 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
+import time
 
 import dldb
 from dldb import dlTile
+
+import torch
 
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
@@ -42,7 +47,7 @@ class Model:
         self.net = fcn.load_model(n_class=3,\
                               fcnname='/media/bill/Windows1/Users/' + \
                               'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-                              'DLDBproject/preFCN20181106_2245')
+                              'DLDBproject/preFCN20181106_2245').eval()
         if self.GPU:
             self.net.cuda()
         
@@ -79,18 +84,68 @@ class Model:
     def prev_example(self):
         self.icurrent = (self.icurrent - 1) % self.batch_size
         
-    def set_zero_selected_feature_maps_hook(self, v):
-        global IDX
+    def set_selected_feature_map_weights_to_zero(self, v):
         picked_module_name = v.get()
         pick = [i for i,n in enumerate(self.module_names)\
-                if n == picked_module_name]
-        
-        handle = self.modules[pick[0]].register_forward_hook(zero_hook)
-        IDX = self.selected_feature_maps
+                if n == picked_module_name][0]
 
+        print('MAD of weight is ',np.mean(np.abs(self.modules[pick].weight.cpu().detach().numpy())))
+        print('MAD of bias is ',np.mean(np.abs(self.modules[pick].bias.cpu().detach().numpy())))
+
+        print('Setting all maps to zero in ', picked_module_name)
+        
+        print(self.modules[pick])
+        mp = self.modules[pick]
+        print(mp)
+        
+        print(self.modules[pick].weight.size())
+        
+        param_names = [name for name,param in self.net.named_parameters()]
+        ppick = [i for i,n in enumerate(param_names)\
+                 if n == picked_module_name + '.weight'][0]
+        
+        params = torch.nn.ParameterList(param for param in self.net.parameters())
+        param_picked = params[ppick]
+        print(param_picked.size())
+        
+        
+        pw = [param for name,param in self.net.named_parameters() \
+              if name == picked_module_name + '.weight'][0]
+        pb = [param for name,param in self.net.named_parameters() \
+              if name == picked_module_name + '.bias'][0]
+        
+        print('training is: ',self.net.training)
+        out0 = self.get_data_for_display(output=True)
+        for fmap in self.selected_feature_maps:
+#            self.modules[pick].weight[:,fmap,:,:]=0.0
+#        for fmap in range(self.modules[pick].weight.size()[1]):
+#            self.modules[pick].weight[:,fmap,:,:]=0.0
+#            self.modules[pick].bias[fmap] = 0.0
+            param_picked[fmap,:,:,:]=0.0
+         #   param_picked.bias[fmap] = 0.0
+        out1 = self.get_data_for_display(output=True)
+        print('Change: ',np.sum(np.abs(out1-out0)))
+            
+#        self.modules[pick].weight[:,:,:,:]=0.0
+#        self.modules[pick].bias[:] = 0.0
+        print(np.sum(np.abs(pw.cpu().detach().numpy())))
+        print(np.sum(np.abs(pb.cpu().detach().numpy())))
+        print(np.sum(np.abs(mp.weight.cpu().detach().numpy())))
+        print(np.sum(np.abs(mp.bias.cpu().detach().numpy())))
+        
+        fmap = self.selected_feature_maps[0]
+        print(np.sum(np.abs(self.modules[pick].weight.cpu().detach().numpy()[fmap,:,:,:])))
+        print(np.sum(np.abs(self.modules[pick].bias.cpu().detach().numpy()[fmap])))
+
+#        handle = self.modules[pick[0]].register_forward_hook(zero_hook)
+#        IDX = self.selected_feature_maps
+        print(id(self.modules[pick]))
+        print(id(mp))
+        print(id(param_picked))
+        
         self.net(self.input)
         self.update_viewers()
-        handle.remove()
+#        handle.remove()
 
 
     def get_data_for_display(self, output = False):
@@ -150,8 +205,14 @@ class Model:
 #        handle = self.modules[pick[0]].register_forward_hook(lambda x,y,z: print(y[0].size()))
 #        handle = self.modules[pick[0]].register_forward_hook(feature_hook)
         handle = self.modules[pick[0]].register_forward_hook(capture_data_hook)
+#        hthis = self.modules[pick[0]].register_forward_hook(summary_hook)
+#        hnext = self.modules[pick[0]+1].register_forward_hook(summary_hook)
         self.net(self.input)
+#        print('not removing hooks!!!')
         handle.remove()
+#        hthis.remove()
+#        hnext.remove()
+        
 #        print('Leaving hook set....')
     
     def make_feature_map_display(self, feat, point_clicked = None):
@@ -191,7 +252,7 @@ class Model:
             fat_bottom = fat_top + brdr
             fat_right = c1
             fat_left = fat_right - sqsize
-            print('setting border to zero for feature',i)
+#            print('setting border to zero for feature',i)
 #            print('fat LRTB: ',fat_left,fat_right,fat_top,fat_bottom)
 #            print('tall LRTB: ',tall_left,tall_right,tall_top,tall_bottom)
 #            
@@ -252,13 +313,12 @@ def capture_data_hook(self, input, output):
     global FEATURE_MAPS, IDX
     print('Hooked!')
     FEATURE_MAPS = output.cpu().detach().numpy()
-
-def zero_hook(self, input, output):
-    global IDX
-    print('zeroing all...')
-    for i in range(output.size()[1]):
-        output[:,i,:,:] = 0
         
+def summary_hook(self, input, output):
+    print('input size:',input[0].size())
+    print('input sum:',np.sum(np.abs(input[0].cpu().detach().numpy())))
+    print('output size:',output.size())
+    print('output sum:',np.sum(np.abs(output.cpu().detach().numpy())))
 
 
 #class FeatureExtractor(nn.Module):
@@ -420,7 +480,7 @@ class View:
         self.plot(event)
             
     def zero_callback(self,event):
-        self.model.set_zero_selected_feature_maps_hook(self.v)
+        self.model.set_selected_feature_map_weights_to_zero(self.v)
 
     def grab(self, event):
         self.model.get_new_data()
