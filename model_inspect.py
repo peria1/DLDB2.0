@@ -95,7 +95,7 @@ class Model:
                 if n == picked_module_name][0]
         
         print(self.modules[pick])
-#        mp = self.modules[pick]
+        mp = self.modules[pick]
 #        print(mp)
 #                
         param_names = [name for name,param in self.net.named_parameters()]
@@ -134,9 +134,19 @@ class Model:
             
         out1 = self.get_data_for_display(output=True)
         print('Change: ',np.sum(np.abs(out1-out0)))
-
+#----------------------
+        global FEATURE_MAPS
+        chandle = mp.register_forward_hook(capture_data_hook)
+        _ = self.net(self.input)
+        chk = FEATURE_MAPS
+        print(chk.shape)
+        for fmap in self.selected_feature_maps:
+            print('sum of feature', fmap,' is :',np.sum(chk[:,fmap,:,:]))
+        chandle.remove()
+        
         self.net(self.input)
         self.update_viewers()
+#----------------------
 
 
     def get_data_for_display(self, output = False):
@@ -374,14 +384,14 @@ class View:
             model.set_feature_map_hook(var)
             model.selected_feature_maps = []
             self.update_plots()
+            
         self.v.trace_add("write", module_callback)
-
         self.paramMenu = Tk.OptionMenu(self.frame2, self.v, *optionList)
         self.paramMenu.pack(side="top",fill=Tk.BOTH)
                 
         self.nextButton = Tk.Button(self.frame2, text="Next")
         self.nextButton.pack(side="top", fill=Tk.BOTH)
-        self.nextButton.bind("<Button>", self.next)
+        self.nextButton.bind("<Button>", self.nextt)
         self.prevButton = Tk.Button(self.frame2, text="Prev")
         self.prevButton.pack(side="top", fill=Tk.BOTH)
         self.prevButton.bind("<Button>", self.prev)
@@ -403,7 +413,7 @@ class View:
         self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
         self.canvas.draw()
                 
-        def process_button(event):
+        def process_figure_click(event):
             point = (event.x, event.y)
             datapoint = (event.xdata, event.ydata)
             if self.ax4.contains_point(point):
@@ -411,12 +421,12 @@ class View:
                     model.make_feature_map_display(FEATURE_MAPS, point_clicked = datapoint)
                     model.update_viewers()
 
-        self.fig.canvas.mpl_connect('button_press_event', process_button)
+        self.fig.canvas.mpl_connect('button_press_event', process_figure_click)
 
 
         self.update_plots()
 
-    def next(self, event):
+    def nextt(self, event):
         self.model.next_example()
         self.plot(event)
 
