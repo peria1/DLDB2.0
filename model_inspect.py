@@ -57,8 +57,8 @@ class Model:
         self.modules = [module for name, module in self.net.named_modules()\
                              if len(module._modules) == 0]
         
-        self.param_list = torch.nn.ParameterList(param for param in self.net.parameters())
-        self.param_list_copy = copy.deepcopy(self.param_list)
+#        self.param_list = torch.nn.ParameterList(param for param in self.net.parameters())
+#        self.param_list_copy = copy.deepcopy(self.param_list)
         
         self.state_dict_save = copy.deepcopy(self.net.state_dict)
         
@@ -95,23 +95,23 @@ class Model:
                 if n == picked_module_name][0]
         
         print(self.modules[pick])
-        mp = self.modules[pick]
-        print(mp)
-                
+#        mp = self.modules[pick]
+#        print(mp)
+#                
         param_names = [name for name,param in self.net.named_parameters()]
         wpick = [i for i,n in enumerate(param_names)\
                  if n == picked_module_name + '.weight'][0]
-        bpick = [i for i,n in enumerate(param_names)\
-                 if n == picked_module_name + '.bias'][0]
-        
-        self.param_list = copy.deepcopy(self.param_list_copy)
-        
+#        bpick = [i for i,n in enumerate(param_names)\
+#                 if n == picked_module_name + '.bias'][0]
+#        
+#        self.param_list = copy.deepcopy(self.param_list_copy)
+#        
         self.net.load_state_dict(self.state_dict_save())
 
-        params = self.param_list
-        weight_picked = params[wpick]
-        bias_picked = params[bpick]
-#        print(id(weight_picked))
+#        params = self.param_list
+#        weight_picked = params[wpick]
+#        bias_picked = params[bpick]
+##        print(id(weight_picked))
 #        print(id(params[wpick]))
 #        print(id(self.param_list[wpick]))
 #        
@@ -120,9 +120,9 @@ class Model:
         out0 = self.get_data_for_display(output=True)
         for fmap in self.selected_feature_maps:
             print(fmap)
-            print(np.sum(np.abs(weight_picked[fmap,:,:,:].cpu().detach().numpy())))
-            weight_picked[fmap,:,:,:] = 0.0
-            bias_picked[fmap] = 0.0
+#            print(np.sum(np.abs(weight_picked[fmap,:,:,:].cpu().detach().numpy())))
+#            weight_picked[fmap,:,:,:] = 0.0
+#            bias_picked[fmap] = 0.0
             self.net.state_dict()[picked_module_name + '.weight'][fmap,:,:,:] = 0.0
             self.net.state_dict()[picked_module_name + '.bias'][fmap] = 0.0
             
