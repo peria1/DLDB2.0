@@ -626,14 +626,13 @@ class dlTile(DLDB):
         self.sourcefile = super().just_filename(currentFile)
         
     def show(self, ax = None):
-        doShow = False
-        if ax is None:
-            ax = plt
-            doShow = True
-        ax.imshow(self.data)
         title = super().just_filename(self.sourcefile)+ ': ' + str(self.origin)
-        ax.set_title(title)
-        if doShow:
+        if ax is None:
+            plt.imshow(self.data)
+            plt.title(title)
+        else:
+            ax.imshow(self.data)
+            ax.set_title(title)
             ax.show()
        
     def get_metadata(self,key=None):

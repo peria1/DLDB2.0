@@ -133,7 +133,11 @@ class Model:
         
             
         out1 = self.get_data_for_display(output=True)
-        print('Change: ',np.sum(np.abs(out1-out0)))
+        print('Geom mean frac change: ',\
+              np.exp(np.mean(np.log(2.0*np.abs(out1-out0)/\
+                                    (np.abs(out1)+np.abs(out0))))))
+        print('mean abs change: ',np.mean(np.abs(out1-out0)))
+        print('mean magnitude: ',np.mean(np.abs(out1) + np.abs(out0))/2.0)
 #----------------------
         global FEATURE_MAPS
         chandle = mp.register_forward_hook(capture_data_hook)
@@ -141,7 +145,7 @@ class Model:
         chk = FEATURE_MAPS
         print(chk.shape)
         for fmap in self.selected_feature_maps:
-            print('sum of feature', fmap,' is :',np.sum(chk[:,fmap,:,:]))
+            print('sum over this minibatch of feature', fmap,' is :',np.sum(chk[:,fmap,:,:]))
         chandle.remove()
         
         self.net(self.input)
