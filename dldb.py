@@ -630,6 +630,7 @@ class dlTile(DLDB):
         if ax is None:
             plt.imshow(self.data)
             plt.title(title)
+            plt.show()
         else:
             ax.imshow(self.data)
             ax.set_title(title)
