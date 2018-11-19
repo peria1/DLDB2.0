@@ -59,6 +59,9 @@ class Model:
         
         self.param_list = torch.nn.ParameterList(param for param in self.net.parameters())
         self.param_list_copy = copy.deepcopy(self.param_list)
+        
+        self.state_dict_save = copy.deepcopy(self.net.state_dict)
+        
         self.db = dldb.DLDB(pth)
 
 
@@ -102,6 +105,8 @@ class Model:
                  if n == picked_module_name + '.bias'][0]
         
         self.param_list = copy.deepcopy(self.param_list_copy)
+        
+        self.net.load_state_dict(self.state_dict_save())
 
         params = self.param_list
         weight_picked = params[wpick]
@@ -118,6 +123,9 @@ class Model:
             print(np.sum(np.abs(weight_picked[fmap,:,:,:].cpu().detach().numpy())))
             weight_picked[fmap,:,:,:] = 0.0
             bias_picked[fmap] = 0.0
+            self.net.state_dict()[picked_module_name + '.weight'][fmap,:,:,:] = 0.0
+            self.net.state_dict()[picked_module_name + '.bias'][fmap] = 0.0
+            
 
             print('actual registered param sum is',\
             np.sum(np.abs([p for i,p in enumerate(self.net.parameters())\
