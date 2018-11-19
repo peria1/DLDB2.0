@@ -58,7 +58,7 @@ class Model:
                              if len(module._modules) == 0]
         
         self.param_list = torch.nn.ParameterList(param for param in self.net.parameters())
-        self.param_list_copy = copy.copy(self.param_list)
+        self.param_list_copy = copy.deepcopy(self.param_list)
         self.db = dldb.DLDB(pth)
 
 
@@ -101,19 +101,29 @@ class Model:
         bpick = [i for i,n in enumerate(param_names)\
                  if n == picked_module_name + '.bias'][0]
         
-        self.param_list = copy.copy(self.param_list_copy)
+        self.param_list = copy.deepcopy(self.param_list_copy)
 
         params = self.param_list
         weight_picked = params[wpick]
         bias_picked = params[bpick]
-        
+#        print(id(weight_picked))
+#        print(id(params[wpick]))
+#        print(id(self.param_list[wpick]))
+#        
         print('training is: ',self.net.training)
+        
         out0 = self.get_data_for_display(output=True)
         for fmap in self.selected_feature_maps:
             print(fmap)
+            print(np.sum(np.abs(weight_picked[fmap,:,:,:].cpu().detach().numpy())))
             weight_picked[fmap,:,:,:] = 0.0
             bias_picked[fmap] = 0.0
 
+            print('actual registered param sum is',\
+            np.sum(np.abs([p for i,p in enumerate(self.net.parameters())\
+                    if i==wpick][0][fmap,:,:,:].cpu().detach().numpy())))
+        
+            
         out1 = self.get_data_for_display(output=True)
         print('Change: ',np.sum(np.abs(out1-out0)))
 
