@@ -120,10 +120,13 @@ if __name__ == "__main__":
 #    allgs = np.asarray(gs.read_region((0,0),0,gs.dimensions))
     
     allT = np.asarray(Tissue.read_region((0,0),0,Tissue.dimensions))
+    T0 = np.mean(allT)
+    dT = np.std(allT)
+    
     test_out = np.zeros_like(allT,dtype=np.float64)[:,:,0]
     
-#    nx, ny = 4096, 256  # nx and ny need to be powers of two. 4096 x 256 maxes out CUDA RAM
-    nx, ny = 256, 256
+    nx, ny = 4096, 256  # nx and ny need to be powers of two. 4096 x 256 maxes out CUDA RAM
+#    nx, ny = 256, 256
     NX, NY = Tissue.dimensions
     IX, IY = (0,0)
     with torch.no_grad():
@@ -137,6 +140,7 @@ if __name__ == "__main__":
                 chnk = \
                 np.transpose(np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
                                         dtype=np.float32),axes=[2,0,1])[0:3,:,:]
+                chnk = (chnk - T0)/dT
                 outchnk = \
                 fcn_model(torch.tensor(chnk).unsqueeze(0).cuda()).cpu().detach()
                 test_out[IY:(IY+h),IX:(IX+w)] = outchnk
