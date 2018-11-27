@@ -89,6 +89,7 @@ class DLDB():
             map_size = 1e12 # does this reserve a terabyte of disk? 
            
             if input_directory==None:
+                print('Be sure to double-click on your chosen directory, and only click ok once you are inside it...')
                 input_directory =self.uichoosedir()
             
             if output_directory == None:

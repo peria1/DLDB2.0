@@ -29,7 +29,8 @@ import copy
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
 class Model:
-    def __init__(self,batch_size=20,GPU=True):
+    def __init__(self,batch_size=20,GPU=True,dldb_path=None,maskfile=None,\
+                 fcn_name=None,vggname=None,n_class=3):
         #
         # Need to eventually work out of a model dictionary or some such. For
         #  now, boneheaded hard-coded paths will have to do. 
@@ -41,14 +42,20 @@ class Model:
         
         self.icurrent = 0
 
-        pth = '/media/bill/Windows1/Users/'+\
-        'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-        'DLDBproject/DLDB_20181015_0552'
+        if dldb_path is None:
+            dldb_path = '/media/bill/Windows1/Users/'+\
+            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+            'DLDBproject/DLDB_20181015_0552'
 
-        self.net = fcn.load_model(n_class=3,\
-                              fcnname='/media/bill/Windows1/Users/' + \
+        if fcn_name is None:
+            fcn_name = '/media/bill/Windows1/Users/' + \
                               'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-                              'DLDBproject/preFCN20181106_2245').eval()
+                              'DLDBproject/preFCN20181106_2245'
+                              
+        self.maskfile = maskfile                      
+                              
+        self.net = fcn.load_model(n_class=n_class,\
+                              fcnname=fcn_name,vggname=vggname).eval()
         if self.GPU:
             self.net.cuda()
         
@@ -56,21 +63,16 @@ class Model:
                              if len(module._modules) == 0]
         self.modules = [module for name, module in self.net.named_modules()\
                              if len(module._modules) == 0]
-        
-#        self.param_list = torch.nn.ParameterList(param for param in self.net.parameters())
-#        self.param_list_copy = copy.deepcopy(self.param_list)
-        
+                
         self.state_dict_save = copy.deepcopy(self.net.state_dict)
         
-        self.db = dldb.DLDB(pth)
-
+        self.db = dldb.DLDB(dldb_path)
 
         self.get_new_data() # sets self.input and self.masks 
         
         self.selected_feature_maps = []
         self.viewers = []
-        
-        
+                
     def update_viewers(self):
         for v in self.viewers:
             v.update_plots()
@@ -79,9 +81,11 @@ class Model:
         self.viewers.append(v)
         
     def get_new_data(self):
+        if not self.maskfile:
+            maskfile = 'test3_cancer.tif'
         Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
         self.input, self.masks = self.grab_new_batch(N=Nlist,\
-                                         maskfile='test3_cancer.tif')
+                                         maskfile=maskfile)
         self.icurrent = 0
         
     def next_example(self):
@@ -133,6 +137,29 @@ class Model:
         
             
         out1 = self.get_data_for_display(output=True)
+        
+#fig = Figure()
+## A canvas must be manually attached to the figure (pyplot would automatically
+## do it).  This is done by instantiating the canvas with the figure as
+## argument.
+#FigureCanvas(fig)
+#ax = fig.add_subplot(111)
+#ax.plot([1, 2, 3])
+#ax.set_title('hi mom')
+#ax.grid(True)
+#ax.set_xlabel('time')
+#ax.set_ylabel('volts')
+#fig.savefig('test')
+#        
+#        
+        diffroot = Tk.Tk()
+        diffig = Figure()
+        FigureCanvasTkAgg(diffig)
+        diffax = diffig.add_subplot(1,1,1)
+        diffax.imshow(out1-out0)
+        diffig.canvas.draw()
+#        diffax.show()
+        
         print('Geom mean frac change: ',\
               np.exp(np.mean(np.log(2.0*np.abs(out1-out0)/\
                                     (np.abs(out1)+np.abs(out0))))))
@@ -210,9 +237,9 @@ class Model:
         self.net(self.input)
         handle.remove()
     
-    def make_feature_map_display(self, feat, point_clicked = None):
+    def make_feature_map_display(self, feature_maps, point_clicked = None):
         
-        nexamp,ndepth,nx,ny = feat.shape
+        nexamp,ndepth,nx,ny = feature_maps.shape
         
         # find nearly square factors to cover depth, i.e. integer factors that bracket the 
         # square root as closely as possible.  
@@ -247,16 +274,17 @@ class Model:
             fat_bottom = fat_top + brdr
             fat_right = c1
             fat_left = fat_right - sqsize
-
-            disp[:, fat_top :fat_bottom,  fat_left :fat_right] = 0
-            disp[:, tall_top:tall_bottom, tall_left:tall_right] = 0
+            for i in range(nexamp):
+                black = np.min(feature_maps[i,:,:,:])
+                disp[i, fat_top :fat_bottom,  fat_left :fat_right] = black
+                disp[i, tall_top:tall_bottom, tall_left:tall_right] = black
 
         print('about to initialize disp...')    
         for examp in range(nexamp):
-            disp[examp,:,:] = np.max(feat[examp,:,:,:]) # per example, for max contrast
+            disp[examp,:,:] = np.max(feature_maps[examp,:,:,:]) # per example, for max contrast
             for i in range(ndepth):
                 r0,r1,c0,c1 = get_feature_corners(i)
-                disp[examp,r0:r1,c0:c1] = feat[examp,i,:,:]
+                disp[examp,r0:r1,c0:c1] = feature_maps[examp,i,:,:]
                 
         if point_clicked is not None:
             px, py = point_clicked
