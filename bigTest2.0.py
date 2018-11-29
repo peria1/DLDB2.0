@@ -96,18 +96,23 @@ if __name__ == "__main__":
     show_plots = False
     GPU = True
     pretrained = False
-        
-    vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
-    'Boucheron CNNs/DLDBproject/vgg20181024_0253'
-    fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
-    'Boucheron CNNs/DLDBproject/FCN20181024_0253'
+    
+    DLDBdir = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
+    'Boucheron CNNs/DLDBproject/'
+
+    
+    vggname = DLDBdir + 'vgg20181024_0253'
+    fcnname = DLDBdir + 'FCN20181024_0253'
          
     m = Model(batch_size=batch_size, GPU=GPU, fcn_name=fcnname, vggname=vggname,\
               n_class=n_class)
     fcn_model = m.net.cuda().eval()
     
     
-    Tissue = openslide.open_slide('../NickReder/test4_annotated.tif')
+#    file_to_process = '../NickReder/test4_annotated.tif'
+    file_to_process = 'NickRederRawData/18-040_n7_Z001989.tif'
+    openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
+    Tissue = openslide.open_slide(file_to_process)
 #    gs =  openslide.open_slide('../NickReder/test4_cancer.tif')
 
 #    tsize = 256

@@ -17,12 +17,9 @@ of cancer, to see how that changes the images. WJP 3-Nov-2018
 #  This is the pared down and evolved version of FCNpytorchFromGithub.py
 #
 #
-#from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.optim as optim
-#from torchvision import models
-#from torchvision.models.vgg import VGG
 import numpy as np
 import matplotlib.pyplot as plt
 #import billUtils as bu

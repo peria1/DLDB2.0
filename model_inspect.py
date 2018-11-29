@@ -14,16 +14,16 @@ except ModuleNotFoundError:
 
 
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
-import time
+#import time
 
 import dldb
 from dldb import dlTile
 
-import torch
+#import torch
 import copy
 
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
@@ -151,13 +151,13 @@ class Model:
 #ax.set_ylabel('volts')
 #fig.savefig('test')
 #        
-#        
-        diffroot = Tk.Tk()
-        diffig = Figure()
-        FigureCanvasTkAgg(diffig)
-        diffax = diffig.add_subplot(1,1,1)
-        diffax.imshow(out1-out0)
-        diffig.canvas.draw()
+#   The following locks everything up....ARGH     
+#        diffroot = Tk.Tk()
+#        diffig = Figure()
+#        FigureCanvasTkAgg(diffig)
+#        diffax = diffig.add_subplot(1,1,1)
+#        diffax.imshow(out1-out0)
+#        diffig.canvas.draw()
 #        diffax.show()
         
         print('Geom mean frac change: ',\
@@ -207,7 +207,7 @@ class Model:
             fm = self.feature_display[self.icurrent,:,:]
             return fm
         else:
-            return np.asarray([[1,0],[0,1]])
+            return np.random.uniform(size=(256,256))  #([[1,0],[0,1]])
     
     def get_net(self):
         return self.net
@@ -371,13 +371,17 @@ class View:
         
         self.frame.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
 
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.frame)
+        self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        self.canvas.draw()
+
  #------------------------       
         self.frame2 = Tk.Frame(root)
         self.frame2.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
  
-        self.plotBut = Tk.Button(self.frame2, text="Plot ")
-        self.plotBut.pack(side="top", fill=Tk.BOTH)
-        self.plotBut.bind("<Button>", self.plot)
+        self.plotButton = Tk.Button(self.frame2, text="Plot ")
+        self.plotButton.pack(side="top", fill=Tk.BOTH)
+        self.plotButton.bind("<Button>", self.update_plots)
 #
 #   Here are the essentials for setting arbitrary hooks based on a menu choice...
 #
@@ -407,7 +411,7 @@ class View:
         # In the next line, "callback" is the name of the function that is 
         #   called when v is changed, i.e. when the user picks a new option from 
         #   paramMenu. It has to be a lambda (an anonymous function) to accomodate
-        #   the additionsl arguments that I want to pass to my set_feature_map_hook code. 
+        #   the additional arguments that I want to pass to my set_feature_map_hook code. 
         # I think that *_ represents the set of arguments that trace_add passes in 
         # the background...I don't get to control that. 
             
@@ -440,10 +444,8 @@ class View:
         self.quitButton = Tk.Button(self.frame2, text="Quit")
         self.quitButton.pack(side="top", fill=Tk.BOTH)
         self.quitButton.bind("<Button>", self.quitit)
-        
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.frame)
-        self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
-        self.canvas.draw()
+
+# ---self.canvas stuff used to be below here...        
                 
         def process_figure_click(event):
             point = (event.x, event.y)
@@ -460,11 +462,11 @@ class View:
 
     def nextt(self, event):
         self.model.next_example()
-        self.plot(event)
+        self.update_plots()
 
     def prev(self, event):
         self.model.prev_example()
-        self.plot(event)
+        self.update_plots()
             
     def zero_callback(self,event):
         self.model.set_selected_feature_map_weights_to_zero(self.v)
@@ -476,9 +478,6 @@ class View:
     def clear(self, event):
         self.ax0.clear()
         self.fig.canvas.draw()
-
-    def plot(self, event):
-        self.update_plots()
         
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
