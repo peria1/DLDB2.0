@@ -8,6 +8,13 @@ and training a decoder to reproduce the input. So, the cancer decision has been 
 and I want to be able to zero out features that activate strongly in the presence 
 of cancer, to see how that changes the images. WJP 3-Nov-2018
 
+It hardly changes the images at all!! I wrote model_inspect to experiment with this. 
+Almost no difference! I then tried a version of the model in which I remove
+the dropout layer. I was thinking that the rigorous demands of the dropout layer 
+may have forced the model to rebuild the input image without really using the 
+"salient features" from the detector. But this gave the same result. Weird! 
+
+
 @author: bill
 """
 # -*- coding: utf-8 -*-
@@ -53,12 +60,11 @@ def show_batch(d,m,nn=None):
 
 
 def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=None):
-
     if N == None:
         N=list(np.random.randint(0,size=batch_size,high=1260))
     
 
-    indata = db.feed_pytorch(N=N)
+    indata, foo = db.feed_pytorch(N=N)
     
     if GPU:
         indata = indata.cuda()
