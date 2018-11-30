@@ -428,7 +428,9 @@ class DLDB():
             ntiles = N
             #nsamp, nx, ny, nz) = inbatch.shape
         
-        inbatch = (inbatch - np.mean(inbatch))/np.std(inbatch)
+        for i in range(3):
+            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
+            np.std(inbatch[:,:,:,i])
         
         if augment:
             augmatinv = self.get_aug_trans(ntiles,(nx,ny))
