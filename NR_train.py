@@ -40,6 +40,7 @@ import matplotlib.pyplot as plt
 import billUtils as bu
 
 from vggfcn import VGGNet, FCN8s
+#import fcn
 
 #from matplotlib.backends.backend_pdf import PdfPages
 #import sys
@@ -157,13 +158,13 @@ if __name__ == "__main__":
     vgg_model = VGGNet(pretrained = pretrained, requires_grad=True, GPU = GPU)
     fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class)
 
-    reload = False
-    if reload:
-#        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
-#        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
-        print('using VGGcurrent and FCNcurrent...')
-        vgg_model.load_state_dict(torch.load('VGGcurrent'))
-        fcn_model.load_state_dict(torch.load('FCNcurrent'))
+#    reload = False
+#    if reload:
+##        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
+##        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
+#        print('using VGGcurrent and FCNcurrent...')
+#        vgg_model.load_state_dict(torch.load('VGGcurrent'))
+#        fcn_model.load_state_dict(torch.load('FCNcurrent'))
     
     
     pw = torch.as_tensor(8.).type(torch.float).cuda()
