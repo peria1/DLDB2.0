@@ -413,7 +413,7 @@ class DLDB():
 
 
     def feed_pytorch(self,N=None,maskfile=None,augment=False):
-
+        openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
         if type(N) is list:
             tiles = self.get_tile_by_number(N)
             (nx,ny,nz) = tiles[0].data.shape
@@ -432,6 +432,10 @@ class DLDB():
             inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
             np.std(inbatch[:,:,:,i])
         
+        IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
+        dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
+        inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
+        
         if augment:
             augmatinv = self.get_aug_trans(ntiles,(nx,ny))
             for i in range(ntiles):
@@ -446,19 +450,25 @@ class DLDB():
             for i,tile in enumerate(tiles):
                 mask = np.asarray(I.read_region(tile.origin[0:2], 0, (nx,ny)))
                 maskbatch[i,:,:,:] = mask[:,:,0:3]
+                mmax = np.max(maskbatch)
+                mmin = np.min(maskbatch)
+                if mmin != mmax:
+                    maskbatch = (maskbatch - mmin)/(mmax - mmin)  # zeros and ones
+                else:
+                    maskbatch = maskbatch / mmax # either all ones or all zeros
 
             if augment:# need both data and masks
                 for i in range(ntiles):
                     maskbatch[i,:,:,:] = warp(maskbatch[i,:,:,:], augmatinv[i,:,:],\
                            mode='reflect')
-            maskbatch = np.transpose(maskbatch,axes=[0,3,1,2])
+            maskbatch = np.transpose(maskbatch,axes=[0,3,1,2])[:,0,:,:]
 
  
         inbatch = np.transpose(inbatch[:,:,:,0:3],axes=[0,3,1,2])
 
         if not maskfile == None:
             return torch.from_numpy(inbatch).float(), \
-                    torch.from_numpy(maskbatch)
+                    torch.from_numpy(maskbatch).float()
         else:
             return torch.from_numpy(inbatch).float(), None
         
