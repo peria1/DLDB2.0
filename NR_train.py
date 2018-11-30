@@ -141,9 +141,11 @@ if __name__ == "__main__":
 #    pth = \
 #'/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/' + \
 #'DLDBproject/DLDB_20180827_0753'
-    pth = \
-'/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/' + \
-'DLDBproject/DLDB_20181015_0552'
+#    pth = \
+#'/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/' + \
+#'DLDBproject/DLDB_20181015_0552'
+
+    pth = bu.uichoosefile()
 
     db = dldb.DLDB(pth)
     
