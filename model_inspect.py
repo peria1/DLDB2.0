@@ -48,9 +48,21 @@ class Model:
             'DLDBproject/DLDB_20181015_0552'
 
         if fcn_name is None:
+#
+#  This fcn is the one that I trained with a dropout layer in place. I then 
+#  began to think that might be a bad idea, so I removed the dropout layer. 
+#            fcn_name = '/media/bill/Windows1/Users/' + \
+#                              'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+#                              'DLDBproject/preFCN20181106_2245'
+
+#
+#   The following fcn is the one I got by removing the dropout layer and training      
+#   the decoder again. This did not change the "zeroing feature maps has hardly
+#   any effect" mystery.          
+#            
             fcn_name = '/media/bill/Windows1/Users/' + \
                               'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-                              'DLDBproject/preFCN20181106_2245'
+                              'DLDBproject/preFCN20181128_1130'
                               
         self.maskfile = maskfile                      
                               
