@@ -146,7 +146,7 @@ if __name__ == "__main__":
 #'/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/' + \
 #'DLDBproject/DLDB_20181015_0552'
 
-    pth = bu.uichoosefile()
+    pth = bu.uichoosedir()
 
     db = dldb.DLDB(pth)
     
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     early = False
     fcn_model.train()
-    for iteration in range(100):
+    for iteration in range(50000):
         optimizer.zero_grad()
         output = fcn_model(indata)
     #       output = torch.sigmoid(output) # needed for plain BCELoss, no logits
