@@ -110,6 +110,8 @@ if __name__ == "__main__":
     
     
 #    file_to_process = '../NickReder/test4_annotated.tif'
+#    file_to_process = 'NickRederRawData/18-040_n7_Z001981.tif'
+#    file_to_process = 'NickRederRawData/18-040_n7_Z001985.tif'
     file_to_process = 'NickRederRawData/18-040_n7_Z001989.tif'
     openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
     Tissue = openslide.open_slide(file_to_process)
@@ -124,9 +126,9 @@ if __name__ == "__main__":
     
 #    allgs = np.asarray(gs.read_region((0,0),0,gs.dimensions))
     
-    allT = np.asarray(Tissue.read_region((0,0),0,Tissue.dimensions))
-    T0 = np.mean(allT)
-    dT = np.std(allT)
+    allT = np.asarray(Tissue.read_region((0,0),0,Tissue.dimensions))[:,:,0:3]
+    T0 = np.mean(allT,axis=(0,1),dtype=np.float32)
+    dT = np.std(allT,axis=(0,1),dtype=np.float32)
     
     test_out = np.zeros_like(allT,dtype=np.float64)[:,:,0]
     
@@ -142,10 +144,10 @@ if __name__ == "__main__":
             while IX < NX:
                 w = nx
                 while IX + w > NX: w//=2
-                chnk = \
-                np.transpose(np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
-                                        dtype=np.float32),axes=[2,0,1])[0:3,:,:]
-                chnk = (chnk - T0)/dT
+                chnk = np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
+                                        dtype=np.float32)[:,:,0:3]
+                chnk = (chnk - T0)/dT # T0 and dT have 3 elements, so they broadcast
+                chnk = np.transpose(chnk,axes=[2,0,1])
                 outchnk = \
                 fcn_model(torch.tensor(chnk).unsqueeze(0).cuda()).cpu().detach()
                 test_out[IY:(IY+h),IX:(IX+w)] = outchnk
