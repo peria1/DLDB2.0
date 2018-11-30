@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Nov  3 07:38:47 2018
+Created on Fri Nov  2 14:58:09 2018
 
 @author: bill
 """
 
-import billUtils as bu
-import torch
+#import torch
 import torch.nn as nn
+#import torch.optim as optim
 from torchvision import models
 from torchvision.models.vgg import VGG
 
 class FCN8s(nn.Module):
 
-    def __init__(self, pretrained_net, n_class): # , drop_layer=drop_layer):
+    def __init__(self, pretrained_net, n_class):
         super().__init__()
-        
-#        self.drop = None
-#        if drop_layer:
-#            self.drop    = nn.Dropout2d(p = 0.5)
-            
+        self.drop    = nn.Dropout2d(p = 0.5)
         self.n_class = n_class
         self.pretrained_net = pretrained_net
         self.relu    = nn.ReLU(inplace=True)
@@ -43,10 +39,7 @@ class FCN8s(nn.Module):
         x3 = output['x3']  # size=(N, 256, x.H/8,  x.W/8)
 
         score = self.relu(self.deconv1(x5))               # size=(N, 512, x.H/16, x.W/16)
-#        if self.drop is not None:
-#            score = self.drop(score)
-#        else:
-#            print('No drop layer...')
+        score = self.drop(score)
         score = self.bn1(score + x4)                      # element-wise add, size=(N, 512, x.H/16, x.W/16)
         score = self.relu(self.deconv2(score))            # size=(N, 256, x.H/8, x.W/8)
         score = self.bn2(score + x3)                      # element-wise add, size=(N, 256, x.H/8, x.W/8)
@@ -77,11 +70,12 @@ class VGGNet(VGG):
         if show_params:
             for name, param in self.named_parameters():
                 print(name, param.device)
-
         if GPU:
             for name, param in self.named_parameters():
                 param.cuda()
                 
+ 
+
     def forward(self, x):
         output = {}
 
@@ -123,32 +117,3 @@ def make_layers(cfg, batch_norm=False):
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
     return nn.Sequential(*layers)
-
-def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
-               vggname=None, fcnname=None): #, drop_layer=True):
-    print(fcnname)
-    print('HEY!!! No drop layer in this version!')
-    # Get the structure of VGG. I don't want to use their pre-trained model (ImageNet?)
-    vgg_model = VGGNet(pretrained = False, requires_grad=True, GPU = GPU)
-    
-    # Get the structure of FCN8 decoder. 
-    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class) #, drop_layer=drop_layer)
-    
-    if vggname is None:
-        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
-    if fcnname is None:
-        fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
-        
-    if load_encoder:
-        print('Loading encoder state from '+bu.just_filename(bu,vggname)+'...')
-        vgg_model.load_state_dict(torch.load(vggname))
-    else:
-        print('Not loading encoder state...')
-
-    if load_decoder:
-        print('Loading decoder state from '+bu.just_filename(bu,fcnname)+'...')
-        fcn_model.load_state_dict(torch.load(fcnname))
-    else:
-        print('Not loading decoder state...')
-
-    return fcn_model
