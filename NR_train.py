@@ -133,7 +133,8 @@ if __name__ == "__main__":
             # draws a boundary, measured in pixels. 
             
     ck = torch.reshape(torch.tensor(circle_kernel(bd)).type(torch.float),(1,1,bd,bd)) 
-
+#    ck = None
+#    print('turned off circle kernel boundary ignorer...')
     
     show_plots = False
     GPU = True
@@ -182,9 +183,10 @@ if __name__ == "__main__":
     indata,y = grab_new_batch(augment=True, boundary_kernel=ck)
 #    print('no boundary kernel...')
 
-    early = False
+    early = True
     fcn_model.train()
-    for iteration in range(50000):
+    for iteration in range(1000):
+        
         optimizer.zero_grad()
         output = fcn_model(indata)
     #       output = torch.sigmoid(output) # needed for plain BCELoss, no logits
@@ -218,6 +220,10 @@ if __name__ == "__main__":
         loss.backward()
         saveloss.append(loss.item())
         optimizer.step()
+        
+        if loss.item() < np.log(2) and early: # stick with same data until model
+            early = False           # is more right than wrong for the 
+            print('setting early to false...') # first time
         
         if iteration % 20 == 0:
             torch.save(fcn_model.state_dict(),'FCNcurrent')
