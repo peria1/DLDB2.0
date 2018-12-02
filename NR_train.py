@@ -185,7 +185,7 @@ if __name__ == "__main__":
 
     early = True
     fcn_model.train()
-    for iteration in range(1000):
+    for iteration in range(50000):
         
         optimizer.zero_grad()
         output = fcn_model(indata)
@@ -221,9 +221,9 @@ if __name__ == "__main__":
         saveloss.append(loss.item())
         optimizer.step()
         
-        if loss.item() < np.log(2) and early: # stick with same data until model
-            early = False           # is more right than wrong for the 
-            print('setting early to false...') # first time
+        if loss.item() < 0.5 and early: 
+            early = False           
+            print('setting early to false...') 
         
         if iteration % 20 == 0:
             torch.save(fcn_model.state_dict(),'FCNcurrent')
@@ -244,9 +244,8 @@ if __name__ == "__main__":
                 xl = plt.xlim()
                 plt.hlines(0.693,xl[0],xl[1]); # Need to be uniformly better than this!
                 plt.pause(0.1)
-                
-        if not early:
-            indata,y = grab_new_batch(augment=True, boundary_kernel=ck)
+            if not early:
+                indata,y = grab_new_batch(augment=True, boundary_kernel=ck)
             
             
     torch.save(fcn_model.state_dict(),'FCN' + db.date_for_filename())
