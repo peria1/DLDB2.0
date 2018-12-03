@@ -221,8 +221,7 @@ if __name__ == "__main__":
 
  #   pth = '/home/bill/DLDBproject/DLDB_20181010_1703'
     pth = bu.uichoosedir('Choose DLDB, don''t click Ok until window is blank...')
-
-#    pth = '/home/bill/DLDBproject/DLDB_20181012_1552'
+#   pth = '/home/bill/DLDBproject/DLDB_20181012_1552' 
 
     db = dldb.DLDB(pth)
     
