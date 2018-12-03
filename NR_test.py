@@ -129,7 +129,7 @@ def make_layers(cfg, batch_norm=False):
     return nn.Sequential(*layers)
 
 #------------------------------------------
-def show_batch(d,m,nn=None):
+def show_batch(d,m,nn=None, delay = 0.5):
     n = d.shape[0]
     
     if nn==None:
@@ -144,7 +144,7 @@ def show_batch(d,m,nn=None):
         plt.imshow(d[i,:,:,:])
         plt.subplot(1,2,2)
         plt.imshow(m[i,:,:])
-        plt.pause(0.5)
+        plt.pause(delay)
     
 #----------------------grab_new_batch
 
@@ -160,6 +160,7 @@ def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=Non
     indata,y = db.feed_pytorch(N=N,maskfile=maskfile, augment=augment)
        
     if boundary_kernel is not None:
+        print('HEY!! Entered convolution part of grab_new_batch...')
         with torch.no_grad():
             npad = int((boundary_kernel.size()[2]-1)/2)
             pad = torch.nn.ReplicationPad2d(npad)
@@ -216,13 +217,12 @@ def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=Non
 
 if __name__ == "__main__":
     
-    import billUtils as bu
 
 
  #   pth = '/home/bill/DLDBproject/DLDB_20181010_1703'
- #   pth = bu.uichoosedir()
+    pth = bu.uichoosedir('Choose DLDB, don''t click Ok until window is blank...')
 
-    pth = '/home/bill/DLDBproject/DLDB_20181012_1552'
+#    pth = '/home/bill/DLDBproject/DLDB_20181012_1552'
 
     db = dldb.DLDB(pth)
     
@@ -244,11 +244,11 @@ if __name__ == "__main__":
 
 
     if reload:
-#        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
-#        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
-        print('using VGGcurrent and FCNcurrent...')
-        vgg_model.load_state_dict(torch.load('VGGcurrent'))
-        fcn_model.load_state_dict(torch.load('FCNcurrent'))
+        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
+        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
+#        print('using VGGcurrent and FCNcurrent...')
+#        vgg_model.load_state_dict(torch.load('VGGcurrent'))
+#        fcn_model.load_state_dict(torch.load('FCNcurrent'))
        
     criterion = nn.BCEWithLogitsLoss(pos_weight = torch.as_tensor(8.).cuda())    
 #    optimizer = optim.SGD(fcn_model.parameters(), lr=1e-3, momentum=0.9)
