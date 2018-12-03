@@ -205,7 +205,7 @@ if __name__ == "__main__":
         count = 0
         while (torch.isnan(loss) and count < 10):
             print('ARGH! Loss is NaN...trying new data...')
-            indata,y = grab_new_batch(augment=True)
+            indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
             count+=1
             output = fcn_model(indata)
             c2 = criterion(output,y)

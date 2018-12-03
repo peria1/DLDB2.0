@@ -222,7 +222,9 @@ if __name__ == "__main__":
  #   pth = '/home/bill/DLDBproject/DLDB_20181010_1703'
  #   pth = bu.uichoosedir()
 
-    pth = '/home/bill/DLDBproject/DLDB_20181012_1552'
+ #   pth = '/home/bill/DLDBproject/DLDB_20181012_1552' 
+
+    pth = bu.uichoosedir()
 
     db = dldb.DLDB(pth)
     
