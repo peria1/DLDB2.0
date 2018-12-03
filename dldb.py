@@ -444,20 +444,21 @@ class DLDB():
                 inbatch[i,:,:,:] = warp(inbatch[i,:,:,:], augmatinv[i,:,:],\
                        mode='reflect')
 
-        if not maskfile == None:
+        if maskfile:
             maskbatch = np.zeros_like(inbatch)
             I = openslide.open_slide(self.input_directory + '/' + maskfile)
             if len(I.level_dimensions) > 1:
                 print('Careful! Using level zero for masks may be incorrect!')
             for i,tile in enumerate(tiles):
-                mask = np.asarray(I.read_region(tile.origin[0:2], 0, (nx,ny)))
+                mask = 255.0 - np.asarray(I.read_region(tile.origin[0:2], 0, (nx,ny)))
                 maskbatch[i,:,:,:] = mask[:,:,0:3]
-                mmax = np.max(maskbatch)
-                mmin = np.min(maskbatch)
-                if mmin != mmax:
-                    maskbatch = (maskbatch - mmin)/(mmax - mmin)  # zeros and ones
-                else:
-                    maskbatch = maskbatch / mmax # either all ones or all zeros
+
+            mmax = np.max(maskbatch)
+            mmin = np.min(maskbatch)
+            if mmin != mmax:
+                maskbatch = (maskbatch - mmin)/(mmax - mmin)  # zeros and ones
+            elif mmax != 0:
+                maskbatch = maskbatch / mmax # either all ones or all zeros
 
             if augment:# need both data and masks
                 for i in range(ntiles):

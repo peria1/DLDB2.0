@@ -64,9 +64,7 @@ def lstar(z,y,pw):
     return 2*y*(1-y)*logp
 
 #----------------------
-   
-
-def show_batch(d,m,nn=None):
+def show_batch(d,m,nn=None, delay = 0.5):
     n = d.shape[0]
     
     if nn==None:
@@ -81,8 +79,9 @@ def show_batch(d,m,nn=None):
         plt.imshow(d[i,:,:,:])
         plt.subplot(1,2,2)
         plt.imshow(m[i,:,:])
-        plt.pause(1.5)
-    
+        plt.title(str(i))
+        plt.pause(delay)
+        
 #----------------------
 def circle_kernel(N):
     if N % 2 is not 1:
@@ -109,13 +108,14 @@ def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=Non
         maskfile='test3_cancer.tif'
 
     indata,y = db.feed_pytorch(N=N,maskfile=maskfile, augment=augment)
-       
+    
     if boundary_kernel is not None:
         with torch.no_grad():
             npad = int((boundary_kernel.size()[2]-1)/2)
             pad = torch.nn.ReplicationPad2d(npad)
             ys = y.shape   
             y = torch.Tensor.view(y,(ys[0],1,ys[1],ys[2]))
+
             y = torch.nn.functional.conv2d(pad(y).type(torch.float), boundary_kernel)
             y = torch.Tensor.view(y,ys)
             y = torch.round(y*2)/2
@@ -181,6 +181,7 @@ if __name__ == "__main__":
 #--------------------------TRAIN    
 
     indata,y = grab_new_batch(augment=True, boundary_kernel=ck)
+
 #    print('no boundary kernel...')
 
     early = True
