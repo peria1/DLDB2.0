@@ -29,6 +29,8 @@ import tkinter as tk
 #import gc
 import torch
 
+openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
+
 ##
 ## It proved impossible to make a single LMDB that was large enough to hold 
 ##  the data sets that we want to use. 
@@ -69,7 +71,8 @@ class DLDB():
                   build = False, caffe_name = None, test_frac = 0.17,
                   use_metadata = False, file_type = 'svs',RBMD = None,
                   sheet_name = None, output_directory = None):
-                
+           
+        
         metadata_loaded = False
         
         if RBMD == None:
@@ -413,7 +416,6 @@ class DLDB():
 
 
     def feed_pytorch(self,N=None,maskfile=None,augment=False):
-        openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
         if type(N) is list:
             tiles = self.get_tile_by_number(N)
             (nx,ny,nz) = tiles[0].data.shape

@@ -208,7 +208,7 @@ class Model:
         return data
     
     def get_mask_for_display(self):
-        m = self.masks[self.icurrent,0,:,:]
+        m = self.masks[self.icurrent,:,:]
         return m
     
     def get_feature_map_for_display(self):
