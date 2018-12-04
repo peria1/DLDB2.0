@@ -38,6 +38,7 @@ from torchvision.models.vgg import VGG
 import numpy as np
 import matplotlib.pyplot as plt
 import billUtils as bu
+import sys
 
 from vggfcn import VGGNet, FCN8s
 #import fcn
@@ -159,13 +160,13 @@ if __name__ == "__main__":
     vgg_model = VGGNet(pretrained = pretrained, requires_grad=True, GPU = GPU)
     fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class)
 
-#    reload = False
-#    if reload:
-##        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
-##        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
-#        print('using VGGcurrent and FCNcurrent...')
-#        vgg_model.load_state_dict(torch.load('VGGcurrent'))
-#        fcn_model.load_state_dict(torch.load('FCNcurrent'))
+    reload = 'reload' in sys.argv
+    if reload:
+#        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
+#        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
+        print('using VGGcurrent and FCNcurrent...')
+        vgg_model.load_state_dict(torch.load('VGGcurrent'))
+        fcn_model.load_state_dict(torch.load('FCNcurrent'))
     
     
     pw = torch.as_tensor(8.).type(torch.float).cuda()
@@ -184,7 +185,8 @@ if __name__ == "__main__":
 
 #    print('no boundary kernel...')
 
-    early = True
+    early = not reload
+    
     fcn_model.train()
     for iteration in range(50000):
         
@@ -245,8 +247,9 @@ if __name__ == "__main__":
                 xl = plt.xlim()
                 plt.hlines(0.693,xl[0],xl[1]); # Need to be uniformly better than this!
                 plt.pause(0.1)
-            if not early:
-                indata,y = grab_new_batch(augment=True, boundary_kernel=ck)
+
+        if not early:
+            indata,y = grab_new_batch(augment=True, boundary_kernel=ck)
             
             
     torch.save(fcn_model.state_dict(),'FCN' + db.date_for_filename())
