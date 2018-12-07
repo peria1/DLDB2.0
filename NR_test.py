@@ -243,8 +243,8 @@ if __name__ == "__main__":
 
 
     if reload:
-        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
-        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
+        vgg_model.load_state_dict(torch.load(bu.uichoosefile(title='Choose VGG...')))
+        fcn_model.load_state_dict(torch.load(bu.uichoosefile(title='Choose FCN...')))
 #        print('using VGGcurrent and FCNcurrent...')
 #        vgg_model.load_state_dict(torch.load('VGGcurrent'))
 #        fcn_model.load_state_dict(torch.load('FCNcurrent'))
