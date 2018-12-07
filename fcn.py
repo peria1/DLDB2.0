@@ -20,6 +20,7 @@ class FCN8s(nn.Module):
 #        self.drop = None
 #        if drop_layer:
 #            self.drop    = nn.Dropout2d(p = 0.5)
+        self.drop    = nn.Dropout2d(p = 0.5)
             
         self.n_class = n_class
         self.pretrained_net = pretrained_net
@@ -47,6 +48,7 @@ class FCN8s(nn.Module):
 #            score = self.drop(score)
 #        else:
 #            print('No drop layer...')
+        score = self.drop(score)
         score = self.bn1(score + x4)                      # element-wise add, size=(N, 512, x.H/16, x.W/16)
         score = self.relu(self.deconv2(score))            # size=(N, 256, x.H/8, x.W/8)
         score = self.bn2(score + x3)                      # element-wise add, size=(N, 256, x.H/8, x.W/8)
@@ -126,8 +128,8 @@ def make_layers(cfg, batch_norm=False):
 
 def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
                vggname=None, fcnname=None): #, drop_layer=True):
-    print(fcnname)
-    print('HEY!!! No drop layer in this version!')
+#    print(fcnname)
+#    print('HEY!!! No drop layer in this version!')
     # Get the structure of VGG. I don't want to use their pre-trained model (ImageNet?)
     vgg_model = VGGNet(pretrained = False, requires_grad=True, GPU = GPU)
     
