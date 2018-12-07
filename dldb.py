@@ -147,7 +147,6 @@ class DLDB():
             txn1 = None
             newLMDB = None
             firstThisLMDB = 0
-
             
             for currentFile in newSourceImages:
                 tiles_to_start = tileCount
@@ -211,7 +210,7 @@ class DLDB():
                     print(self.just_filename(currentFile) + ' failed...')
                     print(e)
                 
-            txn0.put('number_of_tiles'.encode(),pickle.dumps(tileCount))  # TODO
+            txn0.put('number_of_tiles'.encode(),pickle.dumps(tileCount)) 
             txn0.put('processed files'.encode(),pickle.dumps(processedFiles))
             tileIndex.update({newLMDB:(firstThisLMDB,tileCount)})
             txn0.put('tile index'.encode(), pickle.dumps(tileIndex))
@@ -430,9 +429,9 @@ class DLDB():
             ntiles = N
             #nsamp, nx, ny, nz) = inbatch.shape
         
-        for i in range(3):
-            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
-            np.std(inbatch[:,:,:,i])
+#        for i in range(3):
+#            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
+#            np.std(inbatch[:,:,:,i])
         
         IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
         dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
@@ -629,6 +628,20 @@ class DLDB():
         
     def just_filename(self, path):
         return path.split(sep=self.get_slash())[-1]
+
+    def __str__(self):
+        
+        TI = self.lmdbget('tile index')
+        dlist = [':\t '.join([str(tlist), str(key) ]) for key,tlist in TI.items()]
+
+        lines = ['DLDB object built from files in', \
+                 '{}'.format(self.input_directory),\
+                 'with tiles in the following directories:', \
+                 '\n'.join(dlist)]
+        
+        return '\n'.join(lines)
+#        return ("DLDB object built from {}:".format(self.input_directory)
+#                "with tiles: {}")
         
     
 class dlTile(DLDB): 
