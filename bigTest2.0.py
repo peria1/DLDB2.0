@@ -101,21 +101,32 @@ if __name__ == "__main__":
     'Boucheron CNNs/DLDBproject/'
 
     
-    vggname = DLDBdir + 'vgg20181024_0253'
-    fcnname = DLDBdir + 'FCN20181024_0253'
+#    vggname = DLDBdir + 'vgg20181024_0253'  # first useful cancer detector
+#    fcnname = DLDBdir + 'FCN20181024_0253' 
+    vggname = DLDBdir + 'vgg20181205_2144'  # cancer detector with per color normalization
+    fcnname = DLDBdir + 'FCN20181205_2144'
          
     m = Model(batch_size=batch_size, GPU=GPU, fcn_name=fcnname, vggname=vggname,\
               n_class=n_class)
     fcn_model = m.net.cuda().eval()
     
     
-#    file_to_process = '../NickReder/test4_annotated.tif'
+    file_to_process = '../NickReder/test4_annotated.tif'
+    maskfile = '../NickReder/test4_cancer.tif'
+    
 #    file_to_process = 'NickRederRawData/18-040_n7_Z001981.tif'
 #    file_to_process = 'NickRederRawData/18-040_n7_Z001985.tif'
-    file_to_process = 'NickRederRawData/18-040_n7_Z001989.tif'
+#    file_to_process = 'NickRederRawData/18-040_n7_Z001989.tif'
+#    maskfile = None
+    
     openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
     Tissue = openslide.open_slide(file_to_process)
-#    gs =  openslide.open_slide('../NickReder/test4_cancer.tif')
+    
+    allgs = None
+    if maskfile:
+        gs =  openslide.open_slide(maskfile)
+        allgs = np.asarray(gs.read_region((0,0),0,gs.dimensions))[:,:,0]
+        allgs = 1.0 - allgs/np.max(allgs)
 
 #    tsize = 256
 #    origin = (34643,309)
@@ -127,8 +138,10 @@ if __name__ == "__main__":
 #    allgs = np.asarray(gs.read_region((0,0),0,gs.dimensions))
     
     allT = np.asarray(Tissue.read_region((0,0),0,Tissue.dimensions))[:,:,0:3]
-    T0 = np.mean(allT,axis=(0,1),dtype=np.float32)
-    dT = np.std(allT,axis=(0,1),dtype=np.float32)
+#    T0 = np.mean(allT,axis=(0,1),dtype=np.float32)
+#    dT = np.std(allT,axis=(0,1),dtype=np.float32)
+    T0 = np.float32(np.mean(allT,axis=(0,1)))
+    dT = np.float32(np.std(allT,axis=(0,1)))
     
     test_out = np.zeros_like(allT,dtype=np.float64)[:,:,0]
     
@@ -140,32 +153,58 @@ if __name__ == "__main__":
         while IY < NY:
             IX = 0
             h = ny 
-            while (IY + h > NY): h//=2 
+            while (IY + h > NY): 
+                print('dividing h...')
+                h//=2 
             while IX < NX:
                 w = nx
-                while IX + w > NX: w//=2
+                while IX + w > NX:
+                    print('dividing w...')
+                    w//=2
                 chnk = np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
                                         dtype=np.float32)[:,:,0:3]
                 chnk = (chnk - T0)/dT # T0 and dT have 3 elements, so they broadcast
                 chnk = np.transpose(chnk,axes=[2,0,1])
+                chnkfeed = torch.tensor(chnk).unsqueeze(0).cuda()
                 outchnk = \
-                fcn_model(torch.tensor(chnk).unsqueeze(0).cuda()).cpu().detach()
+                fcn_model(chnkfeed).cpu().detach()
                 test_out[IY:(IY+h),IX:(IX+w)] = outchnk
                 
                 IX += nx
             IY += ny
-            print(IY)
+            print(IY, chnkfeed.shape)
                   
     fakegs = np.zeros_like(test_out)
     fakegs[test_out >= 0.67] = 1
 
+    ncols = 1
+    if maskfile:
+        nrows = 3
+        ifake = 2
+        itrue = 3
+    else:
+        nrows = 2
+        ifake = 2
+        itrue = None
+        
 
     plt.figure()
-    plt.subplot(2,1,1)
-    plt.imshow(allT)
-    plt.subplot(2,1,2)
-    plt.imshow(fakegs)    
+    plt.subplot(nrows,ncols,1)
+    plt.subplots_adjust(wspace=0, hspace=0)
+#    f, axarr = plt.subplots(nrows,ncols, gridspec_kw = {'wspace':0, 'hspace':0})
+#    axarr[0].imshow(allT)
+#    axarr[1].imshow(fakegs)
+#    axarr[2].imshow(gs)
     
+    plt.imshow(allT)
+    plt.subplot(nrows,ncols,ifake)
+    plt.imshow(fakegs)    
+    plt.title(' '.join([bu.just_filename(bu,fcnname),'with',bu.just_filename(bu,file_to_process)]))
+    if allgs is not None:
+        plt.subplot(nrows, ncols, itrue)
+        plt.imshow(allgs)
+        plt.title(bu.just_filename(bu,maskfile))
+
 #    tile = Tissue.read_region((34643,309),0,(tsize,tsize))
 #    tile = np.asarray(tile)
 #    tile = np.transpose(tile,axes=(2,0,1))
