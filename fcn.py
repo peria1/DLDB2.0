@@ -137,9 +137,11 @@ def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
     fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class) #, drop_layer=drop_layer)
     
     if vggname is None:
-        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
+#        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
+        vggname = bu.uichoosefile(title='Choose VGG file...')
     if fcnname is None:
-        fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
+#        fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
+        fcnname = bu.uichoosefile(title='Choose FCN file...')
         
     if load_encoder:
         print('Loading encoder state from '+bu.just_filename(bu,vggname)+'...')
