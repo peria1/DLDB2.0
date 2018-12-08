@@ -81,12 +81,14 @@ if __name__ == "__main__":
     fcn_model = m.net.cuda().eval()
     
     instructions = 'Choose a folder with tissue images...don''t click Ok until window looks blank,,,'
-#    dir_to_process = bu.uichoosedir(title=instructions) + '/*.tif'
-#    files_to_process = sorted(glob.glob(dir_to_process))
-#    maskfile = None
-    files_to_process = ['/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
-    'Boucheron CNNs/NickReder/test4_annotated.tif']
-    maskfile = '../NickReder/test4_cancer.tif'
+    dir_to_process = bu.uichoosedir(title=instructions) + '/*.tif'
+    files_to_process = sorted(glob.glob(dir_to_process))
+    files_to_process = [f for f in files_to_process if 'cpd' not in f]
+    
+    maskfile = None
+#    files_to_process = ['/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
+#    'Boucheron CNNs/NickReder/test4_annotated.tif']
+#    maskfile = '../NickReder/test4_cancer.tif'
 
     for file_to_process in files_to_process:
     
