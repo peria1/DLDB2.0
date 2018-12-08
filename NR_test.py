@@ -22,6 +22,7 @@ from dldb import dlTile
 
 from matplotlib.backends.backend_pdf import PdfPages
 import sys
+import uuid
 
 class FCN8s(nn.Module):
 
@@ -258,8 +259,15 @@ if __name__ == "__main__":
 
 #--------------------------TEST    
 
+machine_dict = {26403106419067 : {'name': 'muddlehead', 'low': 1591, 'high' : 2748}, \
+                30139154252066 : {'name': 'bubba', 'low': 2495, 'high' : 3652}}
+
+
+entry = machine_dict[uuid.getnode()]
+low, high = (entry['low'], entry['high']) 
+
         
-Nlist = list(np.random.randint(2495,size=20,high=3652))
+Nlist = list(np.random.randint(1591,size=20,high=2748))
 intest, ytest = grab_new_batch(N=Nlist, maskfile = 'test4_cancer.tif')
 
 fcn_model.eval()
