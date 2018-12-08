@@ -21,169 +21,190 @@ the output of the cancer detector, rather than showing only one tile at a time.
 from model_inspect import Model
 import openslide
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torchvision import models
-from torchvision.models.vgg import VGG
+#import torch.nn as nn
+#import torch.optim as optim
+#from torchvision import models
+#from torchvision.models.vgg import VGG
 import numpy as np
-import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import scipy as sp
+import imageio
+import glob
 
 import billUtils as bu
-from matplotlib.backends.backend_pdf import PdfPages
+#from matplotlib.backends.backend_pdf import PdfPages
 import sys
 import dldb
 from dldb import dlTile
 
+def get_tissue_normalization(H_and_E):
+    nx, ny, nz = H_and_E.shape
+    flatten = lambda A : np.reshape(A,(nx*ny,1)).transpose(1,0)
+    
+    white = np.min(allT,axis=2) > (.92*255)
+    white_frac = np.sum(white)/np.prod(H_and_E.shape[0:2])
+    print('White fraction is {:5.3f}'.format(white_frac))
+    
+    must_be_tissue = flatten(white == 0) 
 
-
-#def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=None):
-#
-#    if N == None:
-#        N=list(np.random.randint(0,size=batch_size,high=1260))
-#    
-#    if maskfile == None:
-#        maskfile='test3_cancer.tif'
-#
-#    indata,y = db.feed_pytorch(N=N,maskfile=maskfile, augment=augment)
-#    y = (y - np.min(y))/(np.max(y)-np.min(y))
-#    
-##        y = y[:,0:2,:,:]
-##        y[:,1,:,:] = 1 - y[:,1,:,:]
-##        y = torch.from_numpy(y).float()
-#
-#    if (type(criterion)==torch.nn.modules.loss.BCELoss)| \
-#        (type(criterion)==torch.nn.modules.loss.BCEWithLogitsLoss):
-#
-#        y = y[:,0,:,:]
-#        y = 1-y
-#      #  y[:,1,:,:] = 1 - y[:,1,:,:]
-#        y = torch.from_numpy(y).float()
-#    elif type(criterion)==torch.nn.modules.loss.CrossEntropyLoss:
-#        y = y[:,0,:,:]
-#        y = torch.from_numpy(y).long()
-#    else:
-#        print('Unknown loss function type')
-
-#        y = y.unsqueeze(1)
+    T0 = np.zeros((nz,))
+    dT = np.zeros_like(T0)
+    for i in range(nz):
+        T0[i] = (flatten(H_and_E[:,:,i])[must_be_tissue]).mean(-1)
+        dT[i] = (flatten(H_and_E[:,:,i])[must_be_tissue]).std(-1)
         
-#    if boundary_kernel is not None:
-#        with torch.no_grad():
-#            npad = int((boundary_kernel.size()[2]-1)/2)
-#            pad = torch.nn.ReplicationPad2d(npad)
-#            ys = y.shape        
-#            y = torch.Tensor.view(y,(ys[0],1,ys[1],ys[2]))
-#            y = torch.nn.functional.conv2d(pad(y) ,boundary_kernel)
-#            y = torch.Tensor.view(y,ys)
-#            y = torch.round(y*2)/2
-#        
-#    if GPU:
-#        indata = indata.cuda()
-#        y = y.cuda()
-#    return indata,y
+    return T0, dT
 
 if __name__ == "__main__":
 
-#    pth = \
-#'/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/' + \
-#'DLDBproject/DLDB_20181015_0552'
-#
-#    db = dldb.DLDB(pth)
-    
+    openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
+
     batch_size, n_class, h, w = 20, 1, 256, 256
 
-    show_plots = False
     GPU = True
     pretrained = False
+#    show_plots = 'plot' in sys.argv
+    show_plots = True
     
     DLDBdir = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
     'Boucheron CNNs/DLDBproject/'
 
     
-    vggname = DLDBdir + 'vgg20181024_0253'
-    fcnname = DLDBdir + 'FCN20181024_0253'
+#    vggname = DLDBdir + 'vgg20181024_0253'  # first useful cancer detector
+#    fcnname = DLDBdir + 'FCN20181024_0253' 
+    vggname = DLDBdir + 'vgg20181205_2144'  # cancer detector with per color normalization
+    fcnname = DLDBdir + 'FCN20181205_2144'
          
     m = Model(batch_size=batch_size, GPU=GPU, fcn_name=fcnname, vggname=vggname,\
               n_class=n_class)
     fcn_model = m.net.cuda().eval()
     
+    instructions = 'Choose a folder with tissue images...don''t click Ok until window looks blank,,,'
+    dir_to_process = bu.uichoosedir(title=instructions) + '/*.tif'
+    files_to_process = sorted(glob.glob(dir_to_process))
+    files_to_process = [f for f in files_to_process if 'cpd' not in f]
     
-#    file_to_process = '../NickReder/test4_annotated.tif'
-#    file_to_process = 'NickRederRawData/18-040_n7_Z001981.tif'
-#    file_to_process = 'NickRederRawData/18-040_n7_Z001985.tif'
-    file_to_process = 'NickRederRawData/18-040_n7_Z001989.tif'
-    openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
-    Tissue = openslide.open_slide(file_to_process)
-#    gs =  openslide.open_slide('../NickReder/test4_cancer.tif')
+    maskfile = None
+#    files_to_process = ['/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
+#    'Boucheron CNNs/NickReder/test4_annotated.tif']
+#    maskfile = '../NickReder/test4_cancer.tif'
 
-#    tsize = 256
-#    origin = (34643,309)
-#    
-#    all_tiles = [i for i in range(2495, 3653)]
-#    istart = 0
-#    iend = len(all_tiles)
+    for file_to_process in files_to_process:
     
-#    allgs = np.asarray(gs.read_region((0,0),0,gs.dimensions))
+        fileparts = file_to_process.split(sep='.')
+        fileparts[-2] += '_cpd'
+        output_file = '.'.join(fileparts)
+            
+        Tissue = openslide.open_slide(file_to_process)
+        
+        allgs = None
+        if maskfile:
+            gs =  openslide.open_slide(maskfile)
+            allgs = np.asarray(gs.read_region((0,0),0,gs.dimensions))[:,:,0]
+            allgs = 1.0 - allgs/np.max(allgs)
     
-    allT = np.asarray(Tissue.read_region((0,0),0,Tissue.dimensions))[:,:,0:3]
-    T0 = np.mean(allT,axis=(0,1),dtype=np.float32)
-    dT = np.std(allT,axis=(0,1),dtype=np.float32)
+        allT = np.asarray(Tissue.read_region((0,0),0,Tissue.dimensions))[:,:,0:3]
+
+        T0, dT = np.float32(get_tissue_normalization(allT))
+        
+        test_out = np.zeros_like(allT,dtype=np.float64)[:,:,0]
+        
+        nx, ny = 4096, 256  # nx and ny need to be powers of two. 4096 x 256 maxes out CUDA RAM
+        NX, NY = Tissue.dimensions
+        IX, IY = (0,0)
+        print('processing ',file_to_process,'...')
+        with torch.no_grad():
+            while IY < NY:
+                IX = 0
+                h = ny 
+                while (IY + h > NY): 
+                    h//=2 
+                while IX < NX:
+                    w = nx
+                    while IX + w > NX:
+                        w//=2
+                    chnk = np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
+                                            dtype=np.float32)[:,:,0:3]
+                    chnk = (chnk - T0)/dT # T0 and dT have 3 elements, so they broadcast
+                    chnk = np.transpose(chnk,axes=[2,0,1])
+                    chnkfeed = torch.tensor(chnk).unsqueeze(0).cuda()
+                    outchnk = \
+                    torch.sigmoid(fcn_model(chnkfeed)).cpu().detach()
+                    test_out[IY:(IY+h),IX:(IX+w)] = outchnk
+                    
+                    IX += nx
+                IY += ny
+                print(IY if IY < NY else NY,'of',NY)
+                      
+        fakegs = np.zeros_like(test_out)
+        fakegs[test_out >= 0.999] = 1
     
-    test_out = np.zeros_like(allT,dtype=np.float64)[:,:,0]
-    
-    nx, ny = 4096, 256  # nx and ny need to be powers of two. 4096 x 256 maxes out CUDA RAM
-#    nx, ny = 256, 256
-    NX, NY = Tissue.dimensions
-    IX, IY = (0,0)
-    with torch.no_grad():
-        while IY < NY:
-            IX = 0
-            h = ny 
-            while (IY + h > NY): h//=2 
-            while IX < NX:
-                w = nx
-                while IX + w > NX: w//=2
-                chnk = np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
-                                        dtype=np.float32)[:,:,0:3]
-                chnk = (chnk - T0)/dT # T0 and dT have 3 elements, so they broadcast
-                chnk = np.transpose(chnk,axes=[2,0,1])
-                outchnk = \
-                fcn_model(torch.tensor(chnk).unsqueeze(0).cuda()).cpu().detach()
-                test_out[IY:(IY+h),IX:(IX+w)] = outchnk
+        imageio.imwrite(output_file, fakegs)
+ 
+        if show_plots:
+            ncols = 1
+            if maskfile:
+                nrows = 3
+                ifake = 2
+                itrue = 3
+            else:
+                nrows = 2
+                ifake = 2
+                itrue = None
                 
-                IX += nx
-            IY += ny
-            print(IY)
-                  
-    fakegs = np.zeros_like(test_out)
-    fakegs[test_out >= 0.67] = 1
+            fig, ax = plt.subplots(nrows, ncols, sharex=True, sharey=True)
+            ax[0].imshow(allT)
+            ax[1].imshow(fakegs)
+            ax[1].set_title(' '.join([bu.just_filename(bu,fcnname),'with',bu.just_filename(bu,file_to_process)]))
+            if allgs is not None:
+                ax[2].imshow(allgs)
+                ax[2].set_title(bu.just_filename(bu,maskfile))
 
 
-    plt.figure()
-    plt.subplot(2,1,1)
-    plt.imshow(allT)
-    plt.subplot(2,1,2)
-    plt.imshow(fakegs)    
-    
-#    tile = Tissue.read_region((34643,309),0,(tsize,tsize))
-#    tile = np.asarray(tile)
-#    tile = np.transpose(tile,axes=(2,0,1))
-#    tile = tile[0:3,:,:]
-#    tile = np.reshape(tile,(1,3,tsize,tsize))
-#    tile = (tile - np.mean(tile))/np.std(tile)
+#  I had some problems with normalization. Turns out it's a numpy bug.
+#                
+#    T0 = np.mean(allT,axis=(0,1),dtype=np.float32) # this yields some kind of roundoff error
+#    dT = np.std(allT,axis=(0,1),dtype=np.float32)  # all three values are the same! 
+#
+#    T0 = np.float32(np.mean(allT,axis=(0,1))) # this gets an answer the appears correct
+#    dT = np.float32(np.std(allT,axis=(0,1)))
+#
+#   I read some stuff about a robust pairwise summation algorithm that numpy uses, 
+#   but apparently it only applies that over trailing dimensions. So I will transpose and
+#   explicitly sum over each trailing dimension in turn. And doing them together does not
+#   work! Look at this example:
+#   np.float16(allT.transpose((2,0,1))).mean(axis=-1).mean(axis=-1)
+#   
+#   Out[108]: array([225.5, 202.1, 221.1], dtype=float16)
+#   
+#   Looks good! Now try to do them in one fell swoop...
+#
+#   np.float16(allT.transpose((2,0,1))).mean(axis=(-1,-2))
+#
+#   Out[110]: array([29.66, 29.66, 29.66], dtype=float16)
 #    
-#    out = torch.sigmoid(fcn_model(torch.tensor(tile,dtype=torch.float32).cuda()))
-#    out = out.cpu().detach().numpy()
+#   Total nonsense!!! An error passing silently! By the way, all three values are literally
+#     equal, not just numerically really close. Where do they come from? Just for fun, I
+#    tried adding some constants into the averaging:
+#
+#np.float16(allT.transpose((2,0,1))+1.0).mean(axis=(-2,-1))
+#Out[113]: array([29.66, 29.66, 29.66], dtype=float16)
+#
+#    HA! 1 == 0!! QED!!!
 #    
+#np.float16(allT.transpose((2,0,1))+1.0e6).mean(axis=(-2,-1))
+#Out[114]: array([inf, inf, inf], dtype=float16)
+#
+#   See! A million IS a big number!!
 #    
-    
-#    plt.figure(2)
-#    plt.clf()
-#    plt.imshow(gs.read_region(origin,0,(tsize,tsize)))
+#np.float16(allT.transpose((2,0,1))+1.0e1).mean(axis=(-2,-1))
+#Out[115]: array([59.3, 59.3, 59.3], dtype=float16)
+#
+#   And 10 is pretty close to 29.7! Is that roundoff error? 
 #    
+#np.float16(allT.transpose((2,0,1))+.5e1).mean(axis=(-2,-1))
+#Out[116]: array([59.3, 59.3, 59.3], dtype=float16)#    
 #    
-#    plt.figure(3)
-#    plt.clf()
-#    plt.imshow(out)
-#    plt.colorbar()
+# I would have a better attitude if I had been subjected to "The Zen of Python" less often.
+#

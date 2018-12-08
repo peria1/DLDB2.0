@@ -67,7 +67,7 @@ openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
 class DLDB():
     def __init__(self, input_directory = None, visualize = False,
                   append_to=None, supervised=False,
-                  tileSize=[299,299],use_level=2,
+                  tileSize=(299,299),use_level=2,
                   build = False, caffe_name = None, test_frac = 0.17,
                   use_metadata = False, file_type = 'svs',RBMD = None,
                   sheet_name = None, output_directory = None):
@@ -147,7 +147,6 @@ class DLDB():
             txn1 = None
             newLMDB = None
             firstThisLMDB = 0
-
             
             for currentFile in newSourceImages:
                 tiles_to_start = tileCount
@@ -211,7 +210,7 @@ class DLDB():
                     print(self.just_filename(currentFile) + ' failed...')
                     print(e)
                 
-            txn0.put('number_of_tiles'.encode(),pickle.dumps(tileCount))  # TODO
+            txn0.put('number_of_tiles'.encode(),pickle.dumps(tileCount)) 
             txn0.put('processed files'.encode(),pickle.dumps(processedFiles))
             tileIndex.update({newLMDB:(firstThisLMDB,tileCount)})
             txn0.put('tile index'.encode(), pickle.dumps(tileIndex))
@@ -430,9 +429,9 @@ class DLDB():
             ntiles = N
             #nsamp, nx, ny, nz) = inbatch.shape
         
-        for i in range(3):
-            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
-            np.std(inbatch[:,:,:,i])
+#        for i in range(3):
+#            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
+#            np.std(inbatch[:,:,:,i])
         
         IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
         dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
@@ -629,6 +628,18 @@ class DLDB():
         
     def just_filename(self, path):
         return path.split(sep=self.get_slash())[-1]
+
+    def __str__(self):
+        
+        TI = self.lmdbget('tile index')
+        dlist = [':\t '.join([str(tlist), str(key) ]) for key,tlist in TI.items()]
+
+        lines = ['DLDB object built from files in', \
+                 '{}'.format(self.input_directory),\
+                 'with tiles in the following directories:', \
+                 '\n'.join(dlist)]
+        
+        return '\n'.join(lines)
         
     
 class dlTile(DLDB): 
