@@ -67,7 +67,7 @@ openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
 class DLDB():
     def __init__(self, input_directory = None, visualize = False,
                   append_to=None, supervised=False,
-                  tileSize=[299,299],use_level=2,
+                  tileSize=(299,299),use_level=2,
                   build = False, caffe_name = None, test_frac = 0.17,
                   use_metadata = False, file_type = 'svs',RBMD = None,
                   sheet_name = None, output_directory = None):
@@ -640,8 +640,6 @@ class DLDB():
                  '\n'.join(dlist)]
         
         return '\n'.join(lines)
-#        return ("DLDB object built from {}:".format(self.input_directory)
-#                "with tiles: {}")
         
     
 class dlTile(DLDB): 
