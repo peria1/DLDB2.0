@@ -67,14 +67,14 @@ if __name__ == "__main__":
 #    show_plots = 'plot' in sys.argv
     show_plots = True
     
-    DLDBdir = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
-    'Boucheron CNNs/DLDBproject/'
-
+#    FCNdir = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
+#    'Boucheron CNNs/DLDBproject/'
+    FCNdir = './'
     
-#    vggname = DLDBdir + 'vgg20181024_0253'  # first useful cancer detector
-#    fcnname = DLDBdir + 'FCN20181024_0253' 
-    vggname = DLDBdir + 'vgg20181205_2144'  # cancer detector with per color normalization
-    fcnname = DLDBdir + 'FCN20181205_2144'
+#    vggname = FCNdir + 'vgg20181024_0253'  # first useful cancer detector
+#    fcnname = FCNdir + 'FCN20181024_0253' 
+    vggname = FCNdir + 'vgg20181205_2144'  # cancer detector with per color normalization
+    fcnname = FCNdir + 'FCN20181205_2144'
          
     m = Model(batch_size=batch_size, GPU=GPU, fcn_name=fcnname, vggname=vggname,\
               n_class=n_class)
