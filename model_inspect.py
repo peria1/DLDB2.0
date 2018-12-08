@@ -6,12 +6,7 @@ Created on Wed Nov  7 15:47:26 2018
 @author: bill
 """
 
-
-try:
-    import Tkinter as Tk # python 2
-except ModuleNotFoundError:
-    import tkinter as Tk # python 3
-
+import tkinter as Tk # python 3
 
 import numpy as np
 #import matplotlib.pyplot as plt
