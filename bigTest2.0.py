@@ -137,8 +137,8 @@ if __name__ == "__main__":
                 IY += ny
                 print(IY if IY < NY else NY,'of',NY)
                       
-        fakegs = np.zeros_like(test_out)
-        fakegs[test_out >= 0.999] = 1
+        fakegs = np.zeros_like(test_out, dtype=np.uint8)
+        fakegs[test_out >= 0.999] = 255
     
         imageio.imwrite(output_file, fakegs)
  
