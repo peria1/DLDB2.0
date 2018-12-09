@@ -64,8 +64,8 @@ if __name__ == "__main__":
 
     GPU = True
     pretrained = False
-#    show_plots = 'plot' in sys.argv
-    show_plots = True
+    show_plots = 'plot' in sys.argv
+#    show_plots = True
     
 #    FCNdir = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/' + \
 #    'Boucheron CNNs/DLDBproject/'
