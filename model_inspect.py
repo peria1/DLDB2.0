@@ -388,7 +388,7 @@ class View:
  
         self.plotButton = Tk.Button(self.frame2, text="Plot ")
         self.plotButton.pack(side="top", fill=Tk.BOTH)
-        self.plotButton.bind("<Button>", self.update_plots)
+        self.plotButton.bind("<Button>", self.plot)
 #
 #   Here are the essentials for setting arbitrary hooks based on a menu choice...
 #
@@ -461,12 +461,12 @@ class View:
                 if type(FEATURE_MAPS) is not str:
                     model.make_feature_map_display(FEATURE_MAPS, point_clicked = datapoint)
                     model.update_viewers()
-
+    
         self.fig.canvas.mpl_connect('button_press_event', process_figure_click)
 
 
         self.update_plots()
-
+    
     def nextt(self, event):
         self.model.next_example()
         self.update_plots()
@@ -486,6 +486,9 @@ class View:
         self.ax0.clear()
         self.fig.canvas.draw()
         
+    def plot(self, event):
+        self.update_plots()
+            
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
         self.ax1.imshow(self.model.get_data_for_display())
