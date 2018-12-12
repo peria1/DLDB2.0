@@ -450,6 +450,7 @@ class View:
 
         self.quitButton = Tk.Button(self.frame2, text="Quit")
         self.quitButton.pack(side="top", fill=Tk.BOTH)
+#        self.quitButton.bind("<Button>",lambda *_ : root.destroy())
         self.quitButton.bind("<Button>", self.quitit)
 
 # ---self.canvas stuff used to be below here...        
@@ -487,7 +488,12 @@ class View:
         self.fig.canvas.draw()
         
     def plot(self, event):
+        print('waiting 1 s, is window still there?')
+        self.root.after(1000, self.bullshit)
         self.update_plots()
+        
+    def bullshit(self):
+        print('called bullshit...')
             
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
@@ -501,7 +507,14 @@ class View:
         self.fig.canvas.draw()
         
     def quitit(self,event):
-        self.root.destroy()
+        print('trying to quit...',self.root.destroy)
+        print(event)
+        print('Callling bullshit and waiting 10 s, is window still there?')
+        self.root.after(1000, self.bullshit)
+        self.root.after(10000, lambda *_ : self.root.destroy())
+#        print('About to destroy...')        
+#        self.root.destroy()
+#        print('Destroyed!')
 
     
 class Controller:
