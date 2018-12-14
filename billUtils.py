@@ -12,34 +12,34 @@ from tkinter.filedialog import FileDialog
 import time
 import platform as platf
 
-def uichoosefile(title = None):
+def uichoosefile(title = None, initialdir = None):
     root = tk.Tk()
     root.withdraw() # we don't want a full GUI, so keep the root window from appearing
-    filename = tk.filedialog.askopenfilename(title=title)
+    filename = tk.filedialog.askopenfilename(title=title, initialdir = initialdir)
     return filename
 
-def uichoosefiles(title = None):
+def uichoosefiles(title = None, initialdir = None):
     root = tk.Tk()
     root.withdraw() # we don't want a full GUI, so keep the root window from appearing
-    filename = tk.filedialog.askopenfilenames(title=title)
+    filename = tk.filedialog.askopenfilenames(title=title, initialdir = initialdir)
     return filename
 
 
-def uichoosedir(title = None):
+def uichoosedir(title = None, initialdir = None):
     root = tk.Tk()
     root.focus_force()
     root.withdraw() # we don't want a full GUI, so keep the root window 
                     #  from appearing
-    pathname = tk.filedialog.askdirectory(title=title)
+    pathname = tk.filedialog.askdirectory(title=title, initialdir = initialdir)
     return pathname
 
-def uichoosedirs(title = None):
+def uichoosedirs(title = None, initialdir = None):
     root = tk.Tk()
     root.focus_force()
     root.withdraw() # we don't want a full GUI, so keep the root window 
                     #  from appearing
     pathnames = []
-    dirselect = tk.filedialog.Directory(title=title)
+    dirselect = tk.filedialog.Directory(title=title, initialdir = initialdir)
     while True:
         d = dirselect.show()
         if not d: break
