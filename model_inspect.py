@@ -390,7 +390,7 @@ class View:
  
         self.plotButton = Tk.Button(self.frame2, text="Plot ")
         self.plotButton.pack(side="top", fill=Tk.BOTH)
-        self.plotButton.bind("<Button>", self.update_plots)
+        self.plotButton.bind("<Button>", self.plot)
 #
 #   Here are the essentials for setting arbitrary hooks based on a menu choice...
 #
@@ -452,6 +452,7 @@ class View:
 
         self.quitButton = Tk.Button(self.frame2, text="Quit")
         self.quitButton.pack(side="top", fill=Tk.BOTH)
+#        self.quitButton.bind("<Button>",lambda *_ : root.destroy())
         self.quitButton.bind("<Button>", self.quitit)
 
 # ---self.canvas stuff used to be below here...        
@@ -463,12 +464,12 @@ class View:
                 if type(FEATURE_MAPS) is not str:
                     model.make_feature_map_display(FEATURE_MAPS, point_clicked = datapoint)
                     model.update_viewers()
-
+    
         self.fig.canvas.mpl_connect('button_press_event', process_figure_click)
 
 
         self.update_plots()
-
+    
     def nextt(self, event):
         self.model.next_example()
         self.update_plots()
@@ -488,6 +489,14 @@ class View:
         self.ax0.clear()
         self.fig.canvas.draw()
         
+    def plot(self, event):
+        print('waiting 1 s, is window still there?')
+        self.root.after(1000, self.bullshit)
+        self.update_plots()
+        
+    def bullshit(self):
+        print('called bullshit...')
+            
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
         self.ax1.imshow(self.model.get_data_for_display())
@@ -500,7 +509,14 @@ class View:
         self.fig.canvas.draw()
         
     def quitit(self,event):
-        self.root.destroy()
+        print('trying to quit...',self.root.destroy)
+        print(event)
+        print('Callling bullshit and waiting 10 s, is window still there?')
+        self.root.after(1000, self.bullshit)
+        self.root.after(10000, lambda *_ : self.root.destroy())
+#        print('About to destroy...')        
+#        self.root.destroy()
+#        print('Destroyed!')
 
     
 class Controller:
