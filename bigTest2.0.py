@@ -38,11 +38,24 @@ import sys
 import dldb
 from dldb import dlTile
 
+"""
+    Given a color micrograph of some Hematoxylin and Eosin stained tissue in 
+    H_and_E, this function computes the mean value in  regions containing tissue, 
+    for each color layer.
+    
+    The criterion "white" is just an empirical test for the absence of tissue, i.e. 
+    the background is white. I don't test for proper H & E colors. So far it has
+    seemed pretty safe. 
+    
+    Because I am only summing over some pixels, I think I need to loop over the 
+    layers to get their mean values, i.e. I can't somehow "vectorize" this. 
+    
+"""
 def get_tissue_normalization(H_and_E):
     nx, ny, nz = H_and_E.shape
     flatten = lambda A : np.reshape(A,(nx*ny,1)).transpose(1,0)
     
-    white = np.min(allT,axis=2) > (.92*255)
+    white = np.min(H_and_E,axis=2) > (.92*255)
     white_frac = np.sum(white)/np.prod(H_and_E.shape[0:2])
     print('White fraction is {:5.3f}'.format(white_frac))
     

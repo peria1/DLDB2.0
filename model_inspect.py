@@ -20,10 +20,25 @@ from dldb import dlTile
 
 #import torch
 import copy
+import traceback as tb
+
 
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
-class Model:
+def check_mainloop():
+    print('Checking for instances of mainloop...')
+    stack = tb.extract_stack()
+    for (file_name, lineno, function_name, text) in stack:
+        if function_name is 'mainloop':
+            report = ['mainloop instance found:',file_name, lineno, function_name, text]
+            report = [str(item) for item in report]
+            print('\n'.join(report))
+    else:
+        print('...done looking for mainloop.')
+
+
+
+class Model():
     def __init__(self,batch_size=20,GPU=True,dldb_path=None,maskfile=None,\
                  fcn_name=None,vggname=None,n_class=3):
         #
@@ -346,27 +361,16 @@ def summary_hook(self, input, output):
     print('output sum:',np.sum(np.abs(output.cpu().detach().numpy())))
 
 
-#class FeatureExtractor(nn.Module):
-#    def __init__(self, submodule, extracted_layers):
-#        self.submodule = submodule
-#
-#    def forward(self, x):
-#        outputs = []
-#        for name, module in self.submodule._modules.items():
-#            x = module(x)
-#            if name in self.extracted_layers:
-#                outputs += [x]
-#        return outputs + [x]
-#
 
-class View:
+class View(Tk.Frame):
 
-    def __init__(self, root, model):
-        self.root = root   
-        self.frame = Tk.Frame(root)
+    def __init__(self, parent, *args, **kwargs):
+        Tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent   
+        self.frame = Tk.Frame(parent)
         
-        self.model = model
-        self.net = model.get_net()
+        self.model = Model()
+        self.net = self.model.get_net()
         
 #        self.fig = Figure(figsize=(7.5, 4), dpi=80) # original
         self.fig = Figure(figsize=(16, 8), dpi=80)
@@ -383,12 +387,170 @@ class View:
         self.canvas.draw()
 
  #------------------------       
-        self.frame2 = Tk.Frame(root)
+        self.frame2 = Tk.Frame(parent)
         self.frame2.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
  
-        self.plotButton = Tk.Button(self.frame2, text="Plot ")
+        self.plotButton = Tk.Button(self.frame2, text="Plot ",command=self.plot)
         self.plotButton.pack(side="top", fill=Tk.BOTH)
-        self.plotButton.bind("<Button>", self.plot)
+#        self.plotButton.bind("<Button>", self.plot)
+#
+        optionList =[name for name, module in self.net.named_modules() \
+                     if len(module._modules) == 0]
+        self.v = Tk.StringVar(master=self.frame2,name="module")
+        self.v.set('not set')
+
+        def module_callback(*_, var=self.v):
+            self.model.set_feature_map_hook(var)
+            self.model.selected_feature_maps = []
+            self.update_plots()
+            
+        self.v.trace_add("write", module_callback)
+        self.paramMenu = Tk.OptionMenu(self.frame2, self.v, *optionList)
+        self.paramMenu.pack(side="top",fill=Tk.BOTH)
+                
+        self.nextButton = Tk.Button(self.frame2, text="Next",command=self.nextt)
+        self.nextButton.pack(side="top", fill=Tk.BOTH)
+
+        self.prevButton = Tk.Button(self.frame2, text="Prev",command=self.prev)
+        self.prevButton.pack(side="top", fill=Tk.BOTH)
+
+        self.zeroButton = Tk.Button(self.frame2, text="Zero", command=self.zero_callback)
+        self.zeroButton.pack(side="top", fill = Tk.BOTH)
+
+        self.grabButton = Tk.Button(self.frame2, text="New Data", command=self.grab)
+        self.grabButton.pack(side="top", fill=Tk.BOTH)
+
+        self.quitButton = Tk.Button(self.frame2, text="Quit", command=self.quitit)
+        self.quitButton.pack(side="top", fill=Tk.BOTH)
+
+        def process_figure_click(event):
+            point = (event.x, event.y)
+            datapoint = (event.xdata, event.ydata)
+            if self.ax4.contains_point(point):
+                if type(FEATURE_MAPS) is not str:
+                    self.model.make_feature_map_display(FEATURE_MAPS, point_clicked = datapoint)
+                    self.model.update_viewers()
+    
+        self.fig.canvas.mpl_connect('button_press_event', process_figure_click)
+
+
+        self.update_plots()
+    
+    def nextt(self):
+        self.model.next_example()
+        self.update_plots()
+
+    def prev(self):
+        self.model.prev_example()
+        self.update_plots()
+            
+    def zero_callback(self):
+        self.model.set_selected_feature_map_weights_to_zero(self.v)
+
+    def grab(self):
+        self.model.get_new_data()
+        self.update_plots()
+    
+    def clear(self):
+        self.ax0.clear()
+        self.fig.canvas.draw()
+        
+    def plot(self):
+        print('waiting 1 s, is window still there?')
+        self.parent.after(1000, self.bullshit)
+        self.update_plots()
+        
+    def bullshit(self):
+        print('called bullshit...')
+            
+    def update_plots(self):
+        self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
+        self.ax1.imshow(self.model.get_data_for_display())
+        self.ax2.imshow(self.model.get_data_for_display(output=True))
+        self.ax3.imshow(self.model.get_mask_for_display())
+        img_fm = self.model.get_feature_map_for_display()
+        self.ax4.imshow(img_fm)
+        self.ax4.set_title(self.v.get())
+        self.ax1.set_title(str(self.model.icurrent))
+        self.fig.canvas.draw()
+        
+    def quitit(self):
+#        def getTkinterLocation():
+#            """Returns the location of the Tkinter module."""
+#            if Tk.__file__.endswith('pyc'):
+#                return Tk.__file__[:-1]
+#            
+#            print(Tk.__file__)
+#            return Tk.__file__
+#        
+        
+#        def inTkinterMainloop():
+#            """Returns true if we're called in the context of Tkinter's
+#        mainloop(), and false otherwise."""
+#            stack = traceback.extract_stack()
+#            tkinter_file = getTkinterLocation()
+#            for (file_name, lineno, function_name, text) in stack:
+#                if (file_name, function_name) == (tkinter_file, 'mainloop'):
+#                    return 1
+#            return 0
+        
+        try:
+            check_mainloop()
+            self.parent.after(5000, check_mainloop )            
+            self.parent.destroy()
+            
+            print('Destroyed window...waiting 5 seconds')
+        except: 
+            pass
+        
+                
+
+#        print('trying to quit...',self.root.destroy)
+#        print('Calling bullshit and waiting 10 s, is window still there?')
+#        self.root.after(10, self.bullshit)
+#        self.root.after(10000, lambda *_ : self.root.destroy())
+##        print('About to destroy...')        
+#        self.root.destroy()
+#        print('Destroyed!')
+
+###
+###
+
+    
+class Controller(Tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        Tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.parent = parent
+        self.model = Model()
+        self.view = View(parent, self.model)
+        self.model.add_viewer(self.view)
+        self.master.title("Model Inspector")
+
+
+    def run(self):
+        self.parent.deiconify()
+        self.parent.mainloop()
+
+if __name__ == '__main__':
+    root = Tk.Tk()
+    View(root)
+    root.mainloop()
+#    c = Controller(root)
+#    c.run()
+
+
+
+#class FeatureExtractor(nn.Module):
+#    def __init__(self, submodule, extracted_layers):
+#        self.submodule = submodule
+#
+#    def forward(self, x):
+#        outputs = []
+#        for name, module in self.submodule._modules.items():
+#            x = module(x)
+#            if name in self.extracted_layers:
+#                outputs += [x]
+#        return outputs + [x]
 #
 #   Here are the essentials for setting arbitrary hooks based on a menu choice...
 #
@@ -411,10 +573,8 @@ class View:
 #        to place the- hook. 
 
 #        optionList = tuple([key for key,item in self.net.named_parameters()])
-        optionList =[name for name, module in self.net.named_modules() \
-                     if len(module._modules) == 0]
-        self.v = Tk.StringVar(master=self.frame2,name="module")
-        self.v.set('not set')
+
+
         # In the next line, "callback" is the name of the function that is 
         #   called when v is changed, i.e. when the user picks a new option from 
         #   paramMenu. It has to be a lambda (an anonymous function) to accomodate
@@ -423,113 +583,3 @@ class View:
         # the background...I don't get to control that. 
             
 #        callback = lambda *_, var=self.v  : model.set_feature_map_hook(var)
-        def module_callback(*_, var=self.v):
-            model.set_feature_map_hook(var)
-            model.selected_feature_maps = []
-            self.update_plots()
-            
-        self.v.trace_add("write", module_callback)
-        self.paramMenu = Tk.OptionMenu(self.frame2, self.v, *optionList)
-        self.paramMenu.pack(side="top",fill=Tk.BOTH)
-                
-        self.nextButton = Tk.Button(self.frame2, text="Next")
-        self.nextButton.pack(side="top", fill=Tk.BOTH)
-        self.nextButton.bind("<Button>", self.nextt)
-        self.prevButton = Tk.Button(self.frame2, text="Prev")
-        self.prevButton.pack(side="top", fill=Tk.BOTH)
-        self.prevButton.bind("<Button>", self.prev)
-
-        
-        self.zeroButton = Tk.Button(self.frame2, text="Zero")
-        self.zeroButton.pack(side="top", fill = Tk.BOTH)
-        self.zeroButton.bind("<Button>", self.zero_callback)
-
-        self.grabButton = Tk.Button(self.frame2, text="New Data")
-        self.grabButton.pack(side="top", fill=Tk.BOTH)
-        self.grabButton.bind("<Button>", self.grab)
-
-        self.quitButton = Tk.Button(self.frame2, text="Quit")
-        self.quitButton.pack(side="top", fill=Tk.BOTH)
-#        self.quitButton.bind("<Button>",lambda *_ : root.destroy())
-        self.quitButton.bind("<Button>", self.quitit)
-
-# ---self.canvas stuff used to be below here...        
-                
-        def process_figure_click(event):
-            point = (event.x, event.y)
-            datapoint = (event.xdata, event.ydata)
-            if self.ax4.contains_point(point):
-                if type(FEATURE_MAPS) is not str:
-                    model.make_feature_map_display(FEATURE_MAPS, point_clicked = datapoint)
-                    model.update_viewers()
-    
-        self.fig.canvas.mpl_connect('button_press_event', process_figure_click)
-
-
-        self.update_plots()
-    
-    def nextt(self, event):
-        self.model.next_example()
-        self.update_plots()
-
-    def prev(self, event):
-        self.model.prev_example()
-        self.update_plots()
-            
-    def zero_callback(self,event):
-        self.model.set_selected_feature_map_weights_to_zero(self.v)
-
-    def grab(self, event):
-        self.model.get_new_data()
-        self.update_plots()
-    
-    def clear(self, event):
-        self.ax0.clear()
-        self.fig.canvas.draw()
-        
-    def plot(self, event):
-        print('waiting 1 s, is window still there?')
-        self.root.after(1000, self.bullshit)
-        self.update_plots()
-        
-    def bullshit(self):
-        print('called bullshit...')
-            
-    def update_plots(self):
-        self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
-        self.ax1.imshow(self.model.get_data_for_display())
-        self.ax2.imshow(self.model.get_data_for_display(output=True))
-        self.ax3.imshow(self.model.get_mask_for_display())
-        img_fm = self.model.get_feature_map_for_display()
-        self.ax4.imshow(img_fm)
-        self.ax4.set_title(self.v.get())
-        self.ax1.set_title(str(self.model.icurrent))
-        self.fig.canvas.draw()
-        
-    def quitit(self,event):
-        print('trying to quit...',self.root.destroy)
-        print(event)
-        print('Callling bullshit and waiting 10 s, is window still there?')
-        self.root.after(1000, self.bullshit)
-        self.root.after(10000, lambda *_ : self.root.destroy())
-#        print('About to destroy...')        
-#        self.root.destroy()
-#        print('Destroyed!')
-
-    
-class Controller:
-    def __init__(self):
-        self.root = Tk.Tk()
-        self.model = Model()
-        self.view = View(self.root, self.model)
-        self.model.add_viewer(self.view)
-
-    def run(self):
-        self.root.title("Model Inspector")
-        self.root.deiconify()
-        self.root.mainloop()
-
-if __name__ == '__main__':
-    c = Controller()
-    c.run()
-
