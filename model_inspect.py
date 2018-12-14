@@ -14,6 +14,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
 #import time
+import billUtils as bu
 
 import dldb
 from dldb import dlTile
@@ -38,9 +39,10 @@ class Model:
         self.icurrent = 0
 
         if dldb_path is None:
-            dldb_path = '/media/bill/Windows1/Users/'+\
-            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-            'DLDBproject/DLDB_20181015_0552'
+            dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
+#            dldb_path = '/media/bill/Windows1/Users/'+\
+#            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+#            'DLDBproject/DLDB_20181015_0552'
 
         if fcn_name is None:
 #
