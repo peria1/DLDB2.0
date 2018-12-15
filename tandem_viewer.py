@@ -13,7 +13,7 @@ openslide.Image.MAX_IMAGE_PIXELS = None
 #
 #
 
-dir0 = '/media/roger/Seagate Expansion Drive/18-040_n7/HE'
+dir0 = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/Nick Reder cpd files'
 
 
 tissue_file = bu.uichoosefile(title='Please choose a tissue file...', initialdir=dir0)
@@ -21,17 +21,26 @@ cpd_file = tissue_file.split(sep='.')
 cpd_file[-2] += '_cpd'
 cpd_file = '.'.join(cpd_file)
 
+C = None
 T = openslide.open_slide(tissue_file)
-C = openslide.open_slide(cpd_file)
+
+try:
+    C = openslide.open_slide(cpd_file)
+except:
+    print('oops no cpd')
 
 img0 = np.asarray(T.read_region((0,0), 0, T.dimensions))
-img1 = np.asarray(C.read_region((0,0), 0, C.dimensions))
+if C:
+    img1 = np.asarray(C.read_region((0,0), 0, C.dimensions))
+    print(np.sum(img1[:,:,0] > 0))
+    fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
+    ax[0].imshow(img0)
+    ax[0].set_title(bu.just_filename(bu,tissue_file))
+    ax[1].imshow(img1[:,:,0])
+else:
+    plt.imshow(img0)
+    plt.title(bu.just_filename(bu,tissue_file))
 
-fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
-
-ax[0].imshow(img0)
-ax[0].set_title(bu.just_filename(bu,tissue_file))
-ax[1].imshow(img1)
 
 
 #fig.canvas.mpl_connect('key_press_event', process_key)
