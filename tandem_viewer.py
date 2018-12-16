@@ -13,7 +13,7 @@ openslide.Image.MAX_IMAGE_PIXELS = None
 #
 #
 
-dir0 = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/Nick Reder cpd files'
+dir0 = '/media/roger/Seagate Expansion Drive/'
 
 
 tissue_file = bu.uichoosefile(title='Please choose a tissue file...', initialdir=dir0)
