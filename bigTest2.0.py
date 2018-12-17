@@ -38,6 +38,8 @@ import sys
 import dldb
 from dldb import dlTile
 
+MAX_WHITE = 0.9
+
 """
     Given a color micrograph of some Hematoxylin and Eosin stained tissue in 
     H_and_E, this function computes the mean value in  regions containing tissue, 
@@ -53,21 +55,25 @@ from dldb import dlTile
 """
 def get_tissue_normalization(H_and_E):
     nx, ny, nz = H_and_E.shape
+    T0 = np.zeros((nz,))
+    dT = np.zeros_like(T0)
+
     flatten = lambda A : np.reshape(A,(nx*ny,1)).transpose(1,0)
     
     white = np.min(H_and_E,axis=2) > (.92*255)
     white_frac = np.sum(white)/np.prod(H_and_E.shape[0:2])
     print('White fraction is {:5.3f}'.format(white_frac))
-    
-    must_be_tissue = flatten(white == 0) 
 
-    T0 = np.zeros((nz,))
-    dT = np.zeros_like(T0)
+    if white_frac > MAX_WHITE:
+        return T0, dT, white_frac
+    
+    must_be_tissue = flatten(white == 0) # must be tissue since it's not background
+
     for i in range(nz):
         T0[i] = (flatten(H_and_E[:,:,i])[must_be_tissue]).mean(-1)
         dT[i] = (flatten(H_and_E[:,:,i])[must_be_tissue]).std(-1)
         
-    return T0, dT
+    return T0, dT, white_frac
 
 if __name__ == "__main__":
 
@@ -119,61 +125,66 @@ if __name__ == "__main__":
     
         allT = np.asarray(Tissue.read_region((0,0),0,Tissue.dimensions))[:,:,0:3]
 
-        T0, dT = np.float32(get_tissue_normalization(allT))
+        T0, dT, white_frac = get_tissue_normalization(allT)
         
-        test_out = np.zeros_like(allT,dtype=np.float64)[:,:,0]
+        if white_frac > MAX_WHITE:
+            print('All white, no tissue..., skipping', file_to_process)
+        else:
+            T0 = np.float32(T0)
+            dT = np.float32(dT)  # for use in pytorch
+            test_out = np.zeros_like(allT,dtype=np.float64)[:,:,0]
+            
+            nx, ny = 4096, 256  # nx and ny need to be powers of two. 4096 x 256 maxes out CUDA RAM
+            NX, NY = Tissue.dimensions
+            IX, IY = (0,0)
+            print('processing ',file_to_process,'...')
+            with torch.no_grad():
+                while IY < NY:
+                    IX = 0
+                    h = ny 
+                    while (IY + h > NY): 
+                        h//=2 
+                    while IX < NX:
+                        w = nx
+                        while IX + w > NX:
+                            w//=2
+                        chnk = np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
+                                                dtype=np.float32)[:,:,0:3]
+                        chnk = (chnk - T0)/dT # T0 and dT have 3 elements, so they broadcast
+                        chnk = np.transpose(chnk,axes=[2,0,1])
+                        chnkfeed = torch.tensor(chnk).unsqueeze(0).cuda()
+                        outchnk = \
+                        torch.sigmoid(fcn_model(chnkfeed)).cpu().detach()
+                        test_out[IY:(IY+h),IX:(IX+w)] = outchnk
+                        
+                        IX += nx
+                    IY += ny
+                    print(IY if IY < NY else NY,'of',NY)
+                          
+            fakegs = np.zeros_like(test_out, dtype=np.uint8)
+            fakegs[test_out >= 0.999] = 255
         
-        nx, ny = 4096, 256  # nx and ny need to be powers of two. 4096 x 256 maxes out CUDA RAM
-        NX, NY = Tissue.dimensions
-        IX, IY = (0,0)
-        print('processing ',file_to_process,'...')
-        with torch.no_grad():
-            while IY < NY:
-                IX = 0
-                h = ny 
-                while (IY + h > NY): 
-                    h//=2 
-                while IX < NX:
-                    w = nx
-                    while IX + w > NX:
-                        w//=2
-                    chnk = np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
-                                            dtype=np.float32)[:,:,0:3]
-                    chnk = (chnk - T0)/dT # T0 and dT have 3 elements, so they broadcast
-                    chnk = np.transpose(chnk,axes=[2,0,1])
-                    chnkfeed = torch.tensor(chnk).unsqueeze(0).cuda()
-                    outchnk = \
-                    torch.sigmoid(fcn_model(chnkfeed)).cpu().detach()
-                    test_out[IY:(IY+h),IX:(IX+w)] = outchnk
+            imageio.imwrite(output_file, fakegs)
+     
+            if show_plots:
+                ncols = 1
+                if maskfile:
+                    nrows = 3
+                    ifake = 2
+                    itrue = 3
+                else:
+                    nrows = 2
+                    ifake = 2
+                    itrue = None
                     
-                    IX += nx
-                IY += ny
-                print(IY if IY < NY else NY,'of',NY)
-                      
-        fakegs = np.zeros_like(test_out, dtype=np.uint8)
-        fakegs[test_out >= 0.999] = 255
+                fig, ax = plt.subplots(nrows, ncols, sharex=True, sharey=True)
+                ax[0].imshow(allT)
+                ax[1].imshow(fakegs)
+                ax[1].set_title(' '.join([bu.just_filename(bu,fcnname),'with',bu.just_filename(bu,file_to_process)]))
+                if allgs is not None:
+                    ax[2].imshow(allgs)
+                    ax[2].set_title(bu.just_filename(bu,maskfile))
     
-        imageio.imwrite(output_file, fakegs)
- 
-        if show_plots:
-            ncols = 1
-            if maskfile:
-                nrows = 3
-                ifake = 2
-                itrue = 3
-            else:
-                nrows = 2
-                ifake = 2
-                itrue = None
-                
-            fig, ax = plt.subplots(nrows, ncols, sharex=True, sharey=True)
-            ax[0].imshow(allT)
-            ax[1].imshow(fakegs)
-            ax[1].set_title(' '.join([bu.just_filename(bu,fcnname),'with',bu.just_filename(bu,file_to_process)]))
-            if allgs is not None:
-                ax[2].imshow(allgs)
-                ax[2].set_title(bu.just_filename(bu,maskfile))
-
 
 #  I had some problems with normalization. Turns out it's a numpy bug.
 #                
