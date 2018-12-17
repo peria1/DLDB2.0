@@ -28,10 +28,10 @@ def get_tissue_percentage(H_and_E):
     maxc = np.max(H_and_E[:,:,0:3],axis=2)
     
     white = minc > (.92*255)
-    white_frac = np.sum(white)/np.prod(H_and_E.shape[0:2])
+    white_frac = np.nansum(white)/np.prod(H_and_E.shape[0:2])
     
     sat_img = (maxc - minc)/maxc
-    sat = np.mean(sat_img[white == 0])
+    sat = np.nanmean(sat_img[white == 0])
     
     return int(100-np.round(white_frac*100)), int(np.round(sat*100))
         
