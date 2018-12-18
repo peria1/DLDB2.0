@@ -163,7 +163,7 @@ if __name__ == "__main__":
                           
             fakegs = np.zeros_like(test_out, dtype=np.uint8)
             
-            fakegs = uint8(255 * test_out)
+            fakegs = np.uint8(255 * test_out)
         
             imageio.imwrite(output_file, fakegs)
      
