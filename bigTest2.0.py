@@ -99,7 +99,7 @@ if __name__ == "__main__":
               n_class=n_class)
     fcn_model = m.net.cuda().eval()
     
-    instructions = 'Choose a folder with tissue images...don''t click Ok until window looks blank,,,'
+    instructions = 'Choose tissue folder...don''t click Ok until window looks blank,,,'
     dir_to_process = bu.uichoosedir(title=instructions) + '/*.tif'
     files_to_process = sorted(glob.glob(dir_to_process))
     files_to_process = [f for f in files_to_process if 'cpd' not in f]
@@ -162,7 +162,8 @@ if __name__ == "__main__":
                     print(IY if IY < NY else NY,'of',NY)
                           
             fakegs = np.zeros_like(test_out, dtype=np.uint8)
-            fakegs[test_out >= 0.999] = 255
+            
+            fakegs = uint8(255 * test_out)
         
             imageio.imwrite(output_file, fakegs)
      
