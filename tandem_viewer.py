@@ -13,14 +13,15 @@ TISSUE_ROOT_DIR_FILE = 'tissue_root_dir.txt'
 
 try:
     with open(TISSUE_ROOT_DIR_FILE,'r') as f:
-        dir0 = f.read()[0:-1] # clip off the newline, as it confuses uichoosefile
+        dir0 = f.read()
+        if dir0[-1] is '\n':
+            dir0 = dir0[0:-1] # clip off the newline, as it confuses uichoosefile
         print('Starting at',dir0)
 except:
     dir0 = bu.uichoosedir(title='Please choose a starting directory for tissue files...')
     with open(TISSUE_ROOT_DIR_FILE,'w') as f:
         if dir0:
             f.write(dir0)
-            
 
 tissue_file = bu.uichoosefile(title='Please choose a tissue file...', initialdir=dir0)
 if not tissue_file:
@@ -44,10 +45,9 @@ else:
             print("Key:", event.key)
         
         def process_button(event):
-            print("Button:", event.x, event.y, event.xdata, event.ydata, event.button)
             if event.inaxes:
                 for a in ax:
-                    a.plot(event.xdata, event.ydata,'o')
+                    a.plot(event.xdata, event.ydata,'xw')
                     a.figure.canvas.draw_idle()   
                     
         fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
