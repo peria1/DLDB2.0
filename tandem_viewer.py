@@ -47,7 +47,7 @@ else:
         def process_button(event):
             if event.inaxes:
                 for a in ax:
-                    a.plot(event.xdata, event.ydata,'xw')
+                    a.plot(event.xdata, event.ydata, color='orange', marker='o')
                     a.figure.canvas.draw_idle()   
                     
         fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
