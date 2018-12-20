@@ -62,7 +62,7 @@ else:
             fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
 
         fig.canvas.mpl_connect('key_press_event', process_key)
-        fig.canvas.mpl_connect('button_press_event', process_button)
+        fig.canvas.mpl_connect('button_release_event', process_button)
 
 
         ax[0].imshow(img0)
