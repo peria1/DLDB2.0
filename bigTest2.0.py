@@ -136,18 +136,23 @@ if __name__ == "__main__":
             
             nx, ny = 4096, 256  # nx and ny need to be powers of two. 4096 x 256 maxes out CUDA RAM
             NX, NY = Tissue.dimensions
-            IX, IY = (0,0)
+            IX, IY = (0,0)  # This is where the current tile starts, i.e. its upper-left
+            border = 64 # This many pixels wide will be discarded around the edge of
+            b = border            #   each tile
+            xmove = nx - 2*b
+            ymove = ny - 2*b
+            
             print('processing ',file_to_process,'...')
             with torch.no_grad():
-                while IY < NY:
+                while IY + h < NY:
                     IX = 0
                     h = ny 
-                    while (IY + h > NY): 
-                        h//=2 
-                    while IX < NX:
+#                    while (IY + h > NY): 
+#                        h//=2 
+                    while IX +w < NX:
                         w = nx
-                        while IX + w > NX:
-                            w//=2
+#                        while IX + w > NX:
+#                            w//=2
                         chnk = np.asarray(Tissue.read_region((IX,IY),0,(w,h)),\
                                                 dtype=np.float32)[:,:,0:3]
                         chnk = (chnk - T0)/dT # T0 and dT have 3 elements, so they broadcast
@@ -155,10 +160,12 @@ if __name__ == "__main__":
                         chnkfeed = torch.tensor(chnk).unsqueeze(0).cuda()
                         outchnk = \
                         torch.sigmoid(fcn_model(chnkfeed)).cpu().detach()
-                        test_out[IY:(IY+h),IX:(IX+w)] = outchnk
+#                        test_out[IY:(IY+h),IX:(IX+w)] = outchnk
+                        test_out[(IY+b):(IY+ny-b),(IX+b):(IX+nx-b)] = \
+                        outchnk[b:(ny-b), b:(nx-b)]
                         
-                        IX += nx
-                    IY += ny
+                        IX += xmove
+                    IY += ymove
                     print(IY if IY < NY else NY,'of',NY)
                           
             fakegs = np.zeros_like(test_out, dtype=np.uint8)
