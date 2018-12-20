@@ -27,6 +27,12 @@ tissue_file = bu.uichoosefile(title='Please choose a tissue file...', initialdir
 if not tissue_file:
     print('Ok, bye!')
 else:
+    test4 = None
+    if 'test4' in tissue_file:
+        tparts = tissue_file.split(sep='/')[0:-1]
+        tparts.append('test4_cancer.tif')
+        test4 = '/'.join(tparts)
+        
     cpd_file = tissue_file.split(sep='.')
     cpd_file[-2] += '_cpd'
     cpd_file = '.'.join(cpd_file)
@@ -50,7 +56,10 @@ else:
                     a.plot(event.xdata, event.ydata, color='orange', marker='o')
                     a.figure.canvas.draw_idle()   
                     
-        fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
+        if not test4:
+            fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
+        else:
+            fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
 
         fig.canvas.mpl_connect('key_press_event', process_key)
         fig.canvas.mpl_connect('button_press_event', process_button)
@@ -58,7 +67,9 @@ else:
 
         ax[0].imshow(img0)
         ax[0].set_title(bu.just_filename(bu,tissue_file))
-        ax[1].imshow(img1)
+        ax[1].imshow(img1 > 230)
+        if test4:
+            ax[2].imshow(imageio.imread(test4))
     else:
         plt.imshow(img0)
         plt.title(bu.just_filename(bu,tissue_file))
