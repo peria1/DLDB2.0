@@ -82,7 +82,7 @@ if __name__ == "__main__":
     batch_size, n_class, h, w = 20, 1, 256, 256
 
     GPU = True
-    pretrained = False
+    pretrained = False  # don't use the ImageNet pretraining...
     show_plots = 'plot' in sys.argv
 #    show_plots = True
     
