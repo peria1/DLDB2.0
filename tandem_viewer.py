@@ -31,6 +31,8 @@ class TandemViewer():
         if not tissue_file:
             print('Ok, bye!')
         else:
+            self.press = False
+            self.move = False
 
             test4 = None
             if 'test4' in tissue_file:
@@ -42,7 +44,7 @@ class TandemViewer():
             cpd_file[-2] += '_cpd'
             cpd_file = '.'.join(cpd_file)
             
-            C = None
+#            C = None   # openslide can't read single channel TIFF
             T = openslide.open_slide(tissue_file)
             
             try:
@@ -59,42 +61,70 @@ class TandemViewer():
                     fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
                 else:
                     fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
-        
-                def process_key(event):
-                    print("Key:", event.key)
-                fig.canvas.mpl_connect('key_press_event', process_key)
+                self.ax = ax
                 
-                def process_button(event):
-                    if event.inaxes:
-                        for a in ax:
-                            a.plot(event.xdata, event.ydata, color='orange',\
-                                   marker='o')
-                            a.figure.canvas.draw_idle()   
-                fig.canvas.mpl_connect('button_release_event', process_button)
+                fig.canvas.mpl_connect('key_press_event', self.process_key)
+                
+                fig.canvas.mpl_connect('button_release_event',\
+                                       self.process_button_release)
+                fig.canvas.mpl_connect('button_press_event',\
+                                       self.process_button)
+                fig.canvas.mpl_connect('motion_notify_event', self.on_move)
         
         
                 ax[0].imshow(img0)
                 ax[0].set_title(bu.just_filename(bu,tissue_file))
-                ax[1].imshow(binary_fill_holes(img1/np.max(img1) > THRESHOLD))
+                show1 = binary_fill_holes(img1/np.max(img1) > THRESHOLD)
+#                show1 = morphology.erosion(show1, selem=ck)
+                
+                ax[1].imshow(show1)
                 if test4:
                     ax[2].imshow(imageio.imread(test4))
             else:
                 plt.imshow(img0)
                 plt.title(bu.just_filename(bu,tissue_file))
     
-        def circle_kernel(self, N):
-            if N % 2 is not 1:
-                print('kernel size must be odd...')
-                return None
-            
-            rmax = (N-1)/2.0
-            x = np.linspace(-rmax,rmax,num=N)
-            xx = np.reshape(np.kron(np.power(x,2),np.ones_like(x)),(N,N))
-            r = np.sqrt(xx + np.transpose(xx))
-            ck = r < rmax
-            ck = ck/np.sum(ck)
+    
+
+    def circle_kernel(self, N):
+        if N % 2 is not 1:
+            print('kernel size must be odd...')
+            return None
         
-            return ck
+        rmax = (N-1)/2.0
+        x = np.linspace(-rmax,rmax,num=N)
+        xx = np.reshape(np.kron(np.power(x,2),np.ones_like(x)),(N,N))
+        r = np.sqrt(xx + np.transpose(xx))
+        ck = r < rmax
+        ck = ck/np.sum(ck)
+    
+        return ck
+    
+    def process_key(self, event):
+        print("Key:", event.key)
+
+    def process_button(self, event):
+#        print('in axes is',event.inaxes)
+        if event.inaxes:
+            self.press = True
+            
+    def process_button_release(self, event):
+        if event.inaxes and not self.just_dragged():
+            for a in self.ax:
+                a.plot(event.xdata, event.ydata, color='orange',\
+                       marker='o')
+                a.figure.canvas.draw_idle() 
+        self.press = False
+        self.move = False
+
+    def on_move(self, event):
+        if self.press:
+            self.move=True
+    
+    def just_dragged(self):
+#        print('press is',self.press,': move is ',self.move)
+        return self.press and self.move
+        
         
 
 if __name__=="__main__":
