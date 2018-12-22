@@ -3,79 +3,102 @@ import openslide
 import numpy as np
 import billUtils as bu
 import imageio
+from skimage import morphology
+from scipy.ndimage.morphology import binary_fill_holes
 
 openslide.Image.MAX_IMAGE_PIXELS = None
 TISSUE_ROOT_DIR_FILE = 'tissue_root_dir.txt'
+THRESHOLD = float(230/255)
 
+class TandemViewer():
+    def __init__(self):
 
-#
-#
-
-try:
-    with open(TISSUE_ROOT_DIR_FILE,'r') as f:
-        dir0 = f.read()
-        if dir0[-1] is '\n':
-            dir0 = dir0[0:-1] # clip off the newline, as it confuses uichoosefile
-        print('Starting at',dir0)
-except:
-    dir0 = bu.uichoosedir(title='Please choose a starting directory for tissue files...')
-    with open(TISSUE_ROOT_DIR_FILE,'w') as f:
-        if dir0:
-            f.write(dir0)
-
-tissue_file = bu.uichoosefile(title='Please choose a tissue file...', initialdir=dir0)
-if not tissue_file:
-    print('Ok, bye!')
-else:
-    test4 = None
-    if 'test4' in tissue_file:
-        tparts = tissue_file.split(sep='/')[0:-1]
-        tparts.append('test4_cancer.tif')
-        test4 = '/'.join(tparts)
+        try:
+            with open(TISSUE_ROOT_DIR_FILE,'r') as f:
+                dir0 = f.read()
+                if dir0[-1] is '\n':
+                    dir0 = dir0[0:-1] # clip off the newline, as it confuses
+                                      #  uichoosefile
+                print('Starting at',dir0)
+        except:
+            dir0 = bu.uichoosedir(title='Please choose a starting directory for tissue files...')
+            with open(TISSUE_ROOT_DIR_FILE,'w') as f:
+                if dir0:
+                    f.write(dir0)
         
-    cpd_file = tissue_file.split(sep='.')
-    cpd_file[-2] += '_cpd'
-    cpd_file = '.'.join(cpd_file)
-    
-    C = None
-    T = openslide.open_slide(tissue_file)
-    
-    try:
-        img1 = imageio.imread(cpd_file)
-    except:
-        print('oops no cpd')
-    
-    img0 = np.asarray(T.read_region((0,0), 0, T.dimensions))
-    if img1.any():
-        def process_key(event):
-            print("Key:", event.key)
-        
-        def process_button(event):
-            if event.inaxes:
-                for a in ax:
-                    a.plot(event.xdata, event.ydata, color='orange', marker='o')
-                    a.figure.canvas.draw_idle()   
-                    
-        if not test4:
-            fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
+        tissue_file = bu.uichoosefile(title='Please choose a tissue file...', \
+                                      initialdir=dir0)
+        if not tissue_file:
+            print('Ok, bye!')
         else:
-            fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
 
-        fig.canvas.mpl_connect('key_press_event', process_key)
-        fig.canvas.mpl_connect('button_release_event', process_button)
+            test4 = None
+            if 'test4' in tissue_file:
+                tparts = tissue_file.split(sep='/')[0:-1]
+                tparts.append('test4_cancer.tif')
+                test4 = '/'.join(tparts)
+                
+            cpd_file = tissue_file.split(sep='.')
+            cpd_file[-2] += '_cpd'
+            cpd_file = '.'.join(cpd_file)
+            
+            C = None
+            T = openslide.open_slide(tissue_file)
+            
+            try:
+                img1 = imageio.imread(cpd_file)
+            except:
+                print('oops no cpd')
+            
+            img0 = np.asarray(T.read_region((0,0), 0, T.dimensions))
+            if img1.any():
+                
+#                ck = self.circle_kernel(13)
+                            
+                if not test4:
+                    fig, ax = plt.subplots(2, 1, sharex=True, sharey=True)
+                else:
+                    fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
+        
+                def process_key(event):
+                    print("Key:", event.key)
+                fig.canvas.mpl_connect('key_press_event', process_key)
+                
+                def process_button(event):
+                    if event.inaxes:
+                        for a in ax:
+                            a.plot(event.xdata, event.ydata, color='orange',\
+                                   marker='o')
+                            a.figure.canvas.draw_idle()   
+                fig.canvas.mpl_connect('button_release_event', process_button)
+        
+        
+                ax[0].imshow(img0)
+                ax[0].set_title(bu.just_filename(bu,tissue_file))
+                ax[1].imshow(binary_fill_holes(img1/np.max(img1) > THRESHOLD))
+                if test4:
+                    ax[2].imshow(imageio.imread(test4))
+            else:
+                plt.imshow(img0)
+                plt.title(bu.just_filename(bu,tissue_file))
+    
+        def circle_kernel(self, N):
+            if N % 2 is not 1:
+                print('kernel size must be odd...')
+                return None
+            
+            rmax = (N-1)/2.0
+            x = np.linspace(-rmax,rmax,num=N)
+            xx = np.reshape(np.kron(np.power(x,2),np.ones_like(x)),(N,N))
+            r = np.sqrt(xx + np.transpose(xx))
+            ck = r < rmax
+            ck = ck/np.sum(ck)
+        
+            return ck
+        
 
-
-        ax[0].imshow(img0)
-        ax[0].set_title(bu.just_filename(bu,tissue_file))
-        ax[1].imshow(img1 > 230)
-        if test4:
-            ax[2].imshow(imageio.imread(test4))
-    else:
-        plt.imshow(img0)
-        plt.title(bu.just_filename(bu,tissue_file))
-    
-    
-    
+if __name__=="__main__":
+    tv = TandemViewer()
     
     plt.show()
     
