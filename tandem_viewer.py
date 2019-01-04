@@ -111,8 +111,9 @@ class TandemViewer():
     def process_button_release(self, event):
         if event.inaxes and not self.just_dragged():
             for a in self.ax:
-                a.plot(event.xdata, event.ydata, color='orange',\
-                       marker='o')
+                a.plot(event.xdata, event.ydata, markerfacecolor='#ff6700',\
+                       markeredgecolor = '#ccff00', marker='D', \
+                       markersize = 7)
                 a.figure.canvas.draw_idle() 
         self.press = False
         self.move = False
