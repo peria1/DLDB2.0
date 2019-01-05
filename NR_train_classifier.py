@@ -63,9 +63,10 @@ def show_batch(d,m,nn=None, delay = 0.5):
         plt.clf()
         plt.subplot(1,2,1)
         plt.imshow(d[i,:,:,:])
+        plt.title(str(i))
         plt.subplot(1,2,2)
         plt.imshow(m[i,:,:])
-        plt.title(str(i))
+        plt.title(str(np.mean(m[i,:,:])))
         plt.pause(delay)
         
 #----------------------
@@ -111,7 +112,7 @@ def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=Non
         y = y.cuda()
         
     
-    return indata, torch.mean(torch.mean(y,-1),-1)
+    return indata, y
 
 #----------------------
 
@@ -124,7 +125,7 @@ if __name__ == "__main__":
 #    ck = None
 #    print('turned off circle kernel boundary ignorer...')
     
-    show_plots = False
+    show_plots = True
     GPU = True
     pretrained = False
 
@@ -183,9 +184,9 @@ if __name__ == "__main__":
         vgg_model.load_state_dict(torch.load('VGGcurrclass'))
     
     
-    pw = torch.as_tensor(8.).type(torch.float).cuda()
-
-    criterion = nn.BCEWithLogitsLoss(pos_weight = pw,reduction='none')    
+#    pw = torch.as_tensor(8.).type(torch.float).cuda()
+#    criterion = nn.BCEWithLogitsLoss(pos_weight = pw,reduction='none')    
+    criterion = nn.BCEWithLogitsLoss()    
     optimizer = optim.SGD(vgg_model.parameters(), lr=1e-3, momentum=0.9)
     
     saveloss = []
@@ -213,14 +214,18 @@ if __name__ == "__main__":
 #        loss = criterion(output, y)
                 
         with torch.enable_grad():
-            c2 = criterion(output,\
+            ym = torch.mean(torch.mean(y,-1),-1)
+            
+#            loss = torch.mean(\
+#                      criterion(output,\
+#                           torch.tensor([(1 if yy > cancer_threshold else 0) \
+#                                         for yy in ym],\
+#                                            dtype=torch.float).cuda()))
+            loss = criterion(output,\
                            torch.tensor([(1 if yy > cancer_threshold else 0) \
-                                         for yy in y],dtype=torch.float).cuda())
-            lst = lstar(torch.sigmoid(output),y,pw)
-            pixloss = c2 + lst
+                                         for yy in ym],\
+                                            dtype=torch.float).cuda())
         
-        loss = torch.mean(pixloss)
-
         count = 0
         while (torch.isnan(loss) and count < 10):
             print('ARGH! Loss is NaN...trying new data...')
