@@ -180,7 +180,7 @@ if __name__ == "__main__":
 #        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
 #        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
         print('using VGGcurrent and FCNcurrent...')
-        vgg_model.load_state_dict(torch.load('VGGcurrent'))
+        vgg_model.load_state_dict(torch.load('VGGcurrclass'))
     
     
     pw = torch.as_tensor(8.).type(torch.float).cuda()
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     early = not reload
     
     vgg_model.train()
-    for iteration in range(4000):
+    for iteration in range(50000):
         
         optimizer.zero_grad()
         output = torch.squeeze(vgg_model(indata))
