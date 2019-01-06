@@ -184,9 +184,9 @@ if __name__ == "__main__":
         vgg_model.load_state_dict(torch.load('VGGcurrclass'))
     
     
-#    pw = torch.as_tensor(8.).type(torch.float).cuda()
-#    criterion = nn.BCEWithLogitsLoss(pos_weight = pw,reduction='none')    
-    criterion = nn.BCEWithLogitsLoss()    
+    pw = torch.as_tensor(8.).type(torch.float).cuda()
+    criterion = nn.BCEWithLogitsLoss(pos_weight = pw)    
+#    criterion = nn.BCEWithLogitsLoss()    
     optimizer = optim.SGD(vgg_model.parameters(), lr=1e-3, momentum=0.9)
     
     saveloss = []
