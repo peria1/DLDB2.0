@@ -125,7 +125,7 @@ if __name__ == "__main__":
 #    ck = None
 #    print('turned off circle kernel boundary ignorer...')
     
-    show_plots = True
+    show_plots = False
     GPU = True
     pretrained = False
 
