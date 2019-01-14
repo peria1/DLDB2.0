@@ -310,7 +310,7 @@ class Model():
                 r0,r1,c0,c1 = get_feature_corners(i)
                 disp[examp,r0:r1,c0:c1] = feature_maps[examp,i,:,:]
                 
-        if point_clicked is not None:
+        if point_clicked:
             px, py = point_clicked
             ifm1 = int(np.floor(py/(sqsize+brdr))*ncols)
             ifm2 = int(np.floor(px/(sqsize+brdr)))
