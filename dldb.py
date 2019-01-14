@@ -28,6 +28,7 @@ import pandas as pd
 import tkinter as tk
 #import gc
 import torch
+from torch.utils.data import Dataset, DataLoader
 
 openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
 
@@ -61,8 +62,18 @@ openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
 # 'time_of_day',
 # 'uichoosedir']
 
-
-
+class BioImage(Dataset):
+    def __init__(self):
+        self.db = DLDB()
+    
+    def __len__(self):
+        return self.db.lmdbget('number_of_tiles')
+    
+    def __getitem__(self, idx):
+        tile = self.db.get_tile_by_number(idx)[0]
+        
+        return tile.data
+        
 
 class DLDB():
     def __init__(self, input_directory = None, visualize = False,
