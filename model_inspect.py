@@ -56,6 +56,7 @@ class Model():
         self.GPU = GPU
         
         self.icurrent = 0
+        self.current_tiles = None
 
         if dldb_path is None:
             dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
@@ -108,14 +109,22 @@ class Model():
     def add_viewer(self,v):
         self.viewers.append(v)
         
-    def get_new_data(self):
+    def get_new_data(self, reload=None):
         
         if not self.maskfile:
             maskfile = 'test3_cancer.tif'
-        Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
+        
+        print('reload is',reload)
+        if not reload or not self.current_tiles:
+            Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
+            self.current_tiles = Nlist
+        else:
+            Nlist = self.current_tiles
+
         self.input, self.masks = self.grab_new_batch(N=Nlist,\
                                          maskfile=maskfile)
-        self.icurrent = 0
+        if not reload:
+            self.icurrent = 0
         
     def next_example(self):
         self.icurrent = (self.icurrent + 1) % self.batch_size
@@ -429,6 +438,11 @@ class View(Tk.Frame):
         self.grabButton = Tk.Button(self.frame2, text="New Data", command=self.grab)
         self.grabButton.pack(side="top", fill=Tk.BOTH)
 
+        self.normButton = Tk.Button(self.frame2, \
+                                    text='Norm ok' if not self.model.normalize_wrong \
+                                    else 'Norm wrong', command=self.toggle_norm)
+        self.normButton.pack(side="top", fill=Tk.BOTH)
+        
         self.quitButton = Tk.Button(self.frame2, text="Quit", command=self.quitit)
         self.quitButton.pack(side="top", fill=Tk.BOTH)
 
@@ -455,9 +469,18 @@ class View(Tk.Frame):
             
     def zero_callback(self):
         self.model.set_selected_feature_map_weights_to_zero(self.v)
+        self.update_plots()
 
     def grab(self):
         self.model.get_new_data()
+        self.update_plots()
+    
+    def toggle_norm(self):
+        self.model.normalize_wrong = not self.model.normalize_wrong
+        self.normButton["text"] ='Norm ok' if not self.model.normalize_wrong \
+                                    else 'Norm wrong'
+        self.model.get_new_data(reload=True)
+        self.model.set_feature_map_hook(self.v)
         self.update_plots()
     
     def clear(self):
@@ -504,8 +527,8 @@ class View(Tk.Frame):
 #            return 0
         
         try:
-            check_mainloop()
-            self.parent.after(5000, check_mainloop )            
+#            check_mainloop()
+#            self.parent.after(5000, check_mainloop )            
             self.parent.destroy()
             
             print('Destroyed window...waiting 5 seconds')
