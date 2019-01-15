@@ -425,7 +425,8 @@ class DLDB():
             return aminv
 
 
-    def feed_pytorch(self,N=None,maskfile=None,augment=False):
+    def feed_pytorch(self,N=None,maskfile=None,augment=False, \
+                     normalize_wrong=False):
         if type(N) is list:
             tiles = self.get_tile_by_number(N)
             (nx,ny,nz) = tiles[0].data.shape
@@ -444,10 +445,14 @@ class DLDB():
 #            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
 #            np.std(inbatch[:,:,:,i])
         
-        IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-        dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-        inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-        
+        if normalize_wrong:
+            print('Wrong normalization!')
+            inbatch = (inbatch - np.mean(inbatch))/np.std(inbatch)
+        else:
+            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
+            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
+            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
+            
         if augment:
             augmatinv = self.get_aug_trans(ntiles,(nx,ny))
             for i in range(ntiles):

@@ -48,6 +48,10 @@ class Model():
         #
         import fcn
         
+        self.normalize_wrong = True
+        if self.normalize_wrong:
+            print('Using incorrect 3-color lumped normalization...')
+        
         self.batch_size = batch_size
         self.GPU = GPU
         
@@ -105,6 +109,7 @@ class Model():
         self.viewers.append(v)
         
     def get_new_data(self):
+        
         if not self.maskfile:
             maskfile = 'test3_cancer.tif'
         Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
@@ -236,12 +241,14 @@ class Model():
     def get_net(self):
         return self.net
     
-    def grab_new_batch(self,N=None, maskfile = None, augment = False, boundary_kernel=None):
+    def grab_new_batch(self,N=None, maskfile = None, augment = False, \
+                       boundary_kernel=None):
 
         if N == None:
             N=list(np.random.randint(0,size=self.batch_size,high=1260))    
 
-        indata, y = self.db.feed_pytorch(N=N, maskfile=maskfile)
+        indata, y = self.db.feed_pytorch(N=N, maskfile=maskfile,\
+                                        normalize_wrong=self.normalize_wrong)
         
         if self.GPU:
             indata = indata.cuda()
