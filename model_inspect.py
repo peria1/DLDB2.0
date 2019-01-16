@@ -48,8 +48,8 @@ class Model():
         #
         import fcn
         
-        self.normalize_wrong = True
-        if self.normalize_wrong:
+        self.normalize_wrong = 'lump3'
+        if self.normalize_wrong is 'lump3':
             print('Using incorrect 3-color lumped normalization...')
         
         self.batch_size = batch_size
@@ -206,7 +206,7 @@ class Model():
 #----------------------
         global FEATURE_MAPS
         chandle = mp.register_forward_hook(capture_data_hook)
-        _ = self.net(self.input)
+        self.net(self.input)
         chk = FEATURE_MAPS
         print(chk.shape)
         for fmap in self.selected_feature_maps:
@@ -438,10 +438,31 @@ class View(Tk.Frame):
         self.grabButton = Tk.Button(self.frame2, text="New Data", command=self.grab)
         self.grabButton.pack(side="top", fill=Tk.BOTH)
 
-        self.normButton = Tk.Button(self.frame2, \
-                                    text='Norm ok' if not self.model.normalize_wrong \
-                                    else 'Norm wrong', command=self.toggle_norm)
-        self.normButton.pack(side="top", fill=Tk.BOTH)
+
+        normList = ['correct', 'lump3','no green']
+        self.normname = Tk.StringVar(master=self.frame2, name='norm')
+        self.normname.set(self.model.normalize_wrong)
+        
+        def change_norm_callback(*_, var=self.normname):
+            print(var.get())
+            if var.get() != 'correct':
+                self.model.normalize_wrong = var.get()
+            else:
+                print('setting to false')
+                self.model.normalize_wrong = False
+            
+            self.model.get_new_data(reload=True)
+            self.model.set_feature_map_hook(self.v)
+            self.update_plots()
+                
+        self.normname.trace_add("write", change_norm_callback)
+        self.normmenu = Tk.OptionMenu(self.frame2, self.normname, *normList)
+        self.normmenu.pack(side="top", fill = Tk.BOTH)
+
+#        self.normButton = Tk.Button(self.frame2, \
+#                                    text='Norm ok' if not self.model.normalize_wrong \
+#                                    else 'Norm wrong', command=self.toggle_norm)
+#        self.normButton.pack(side="top", fill=Tk.BOTH)
         
         self.quitButton = Tk.Button(self.frame2, text="Quit", command=self.quitit)
         self.quitButton.pack(side="top", fill=Tk.BOTH)
@@ -476,7 +497,11 @@ class View(Tk.Frame):
         self.update_plots()
     
     def toggle_norm(self):
-        self.model.normalize_wrong = not self.model.normalize_wrong
+        if not self.model.normalize_wrong:
+            self.model.normalize_wrong = 'lump3'
+        else:
+            self.model.normalize_wrong = False
+            
         self.normButton["text"] ='Norm ok' if not self.model.normalize_wrong \
                                     else 'Norm wrong'
         self.model.get_new_data(reload=True)
@@ -531,7 +556,7 @@ class View(Tk.Frame):
 #            self.parent.after(5000, check_mainloop )            
             self.parent.destroy()
             
-            print('Destroyed window...waiting 5 seconds')
+#            print('Destroyed window...waiting 5 seconds')
         except: 
             pass
         

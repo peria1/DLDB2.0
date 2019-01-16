@@ -445,13 +445,16 @@ class DLDB():
 #            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
 #            np.std(inbatch[:,:,:,i])
         
-        if normalize_wrong:
-            print('Wrong normalization!')
-            inbatch = (inbatch - np.mean(inbatch))/np.std(inbatch)
-        else:
+        if not normalize_wrong: # Do it correctly!
+            print('normalizing correctly...')
             IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
             dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
             inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
+        elif normalize_wrong == 'lump3':
+            print('Using 3-color lumped normalization...')
+            inbatch = (inbatch - np.mean(inbatch))/np.std(inbatch)
+        else:
+            print('Unknown normalization:', normalize_wrong)
             
         if augment:
             augmatinv = self.get_aug_trans(ntiles,(nx,ny))
