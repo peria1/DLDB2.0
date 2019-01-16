@@ -439,7 +439,8 @@ class View(Tk.Frame):
         self.grabButton.pack(side="top", fill=Tk.BOTH)
 
 
-        normList = ['correct', 'lump3','no green']
+        normList = ['correct', 'lump3','no red', 'no green', 'no blue', \
+                    'only red', 'only green', 'only blue']
         self.normname = Tk.StringVar(master=self.frame2, name='norm')
         self.normname.set(self.model.normalize_wrong)
         
