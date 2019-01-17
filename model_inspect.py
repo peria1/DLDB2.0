@@ -440,7 +440,10 @@ class View(Tk.Frame):
 
 
         normList = ['correct', 'lump3','no red', 'no green', 'no blue', \
-                    'only red', 'only green', 'only blue']
+                    'only red', 'only green', 'only blue',
+                    'zero red', 'zero green', 'zero blue',\
+                    'only red and zero', 'only green and zero', \
+                    'only blue and zero']
         self.normname = Tk.StringVar(master=self.frame2, name='norm')
         self.normname.set(self.model.normalize_wrong)
         

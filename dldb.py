@@ -445,56 +445,49 @@ class DLDB():
 #            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
 #            np.std(inbatch[:,:,:,i])
         
-        if not normalize_wrong: # Do it correctly!
-            print('normalizing correctly...')
-            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-        elif normalize_wrong == 'lump3':
+        if normalize_wrong == 'lump3':
             print('Using 3-color lumped normalization...')
             inbatch = (inbatch - np.mean(inbatch))/np.std(inbatch)
-        elif normalize_wrong == 'no red':
-            print('knocking out the red layer...') # first do correctly...
+        else: 
             IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
             dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
             inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-            inbatch[:,:,:,0] = IB0[0] # set entire R layer to its batch average
-        elif normalize_wrong == 'no green':
-            print('knocking out the green layer...') # first do correctly...
-            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-            inbatch[:,:,:,1] = IB0[1] # set entire G layer to its batch average
-        elif normalize_wrong == 'no blue':
-            print('knocking out the blue layer...') # first do correctly...
-            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-            inbatch[:,:,:,2] = IB0[2] # set entire B layer to its batch average
-        elif normalize_wrong == 'only red':
-            print('knocking out the green and blue layers...') # first do correctly...
-            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-            inbatch[:,:,:,1] = IB0[1] # set entire G layer to its batch average
-            inbatch[:,:,:,2] = IB0[2] # set entire B layer to its batch average
-        elif normalize_wrong == 'only green':
-            print('knocking out the red and blue layers...') # first do correctly...
-            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-            inbatch[:,:,:,0] = IB0[0] # set entire R layer to its batch average
-            inbatch[:,:,:,2] = IB0[2] # set entire B layer to its batch average
-        elif normalize_wrong == 'only blue':
-            print('knocking out the red and green layers...') # first do correctly...
-            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-            inbatch[:,:,:,0] = IB0[0] # set entire R layer to its batch average
-            inbatch[:,:,:,1] = IB0[1] # set entire G layer to its batch average
-        else:
-            print('Unknown normalization:', normalize_wrong)
+
+            if 'zero' in normalize_wrong:
+                zap = np.zeros_like(IB0)
+            else:
+                zap = IB0
             
+            
+            print('zap is',zap)
+            
+            if not normalize_wrong:
+                print('normalizing correctly...')
+                pass
+            elif normalize_wrong in ['no red', 'zero red']:
+                print('knocking out the red layer...') # first do correctly...
+                inbatch[:,:,:,0] = zap[0] # set entire R layer to its batch average
+            elif normalize_wrong in ['no green','zero green']:
+                inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
+                inbatch[:,:,:,1] = zap[1] # set entire G layer to its batch average
+            elif normalize_wrong in  ['no blue','zero blue']:
+                print('knocking out the blue layer...') # first do correctly...
+                inbatch[:,:,:,2] = zap[2] # set entire B layer to its batch average
+            elif normalize_wrong in ['only red','only red and zero']:
+                print('knocking out the green and blue layers...') # first do correctly...
+                inbatch[:,:,:,1] = zap[1] # set entire G layer to its batch average
+                inbatch[:,:,:,2] = zap[2] # set entire B layer to its batch average
+            elif normalize_wrong in ['only green','only green and zero']:
+                print('knocking out the red and blue layers...') # first do correctly...
+                inbatch[:,:,:,0] = zap[0] # set entire R layer to its batch average
+                inbatch[:,:,:,2] = zap[2] # set entire B layer to its batch average
+            elif normalize_wrong in ['only blue','only blue and zero']:
+                print('knocking out the red and green layers...') # first do correctly...
+                inbatch[:,:,:,0] = zap[0] # set entire R layer to its batch average
+                inbatch[:,:,:,1] = zap[1] # set entire G layer to its batch average
+            else:
+                print('Unknown normalization:', normalize_wrong)
+                
         if augment:
             augmatinv = self.get_aug_trans(ntiles,(nx,ny))
             for i in range(ntiles):
