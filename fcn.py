@@ -127,29 +127,33 @@ def make_layers(cfg, batch_norm=False):
     return nn.Sequential(*layers)
 
 def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
-               vggname=None, fcnname=None): #, drop_layer=True):
+               vggname=None, fcnname=None, requires_grad = True): #, drop_layer=True):
 #    print(fcnname)
 #    print('HEY!!! No drop layer in this version!')
     # Get the structure of VGG. I don't want to use their pre-trained model (ImageNet?)
-    vgg_model = VGGNet(pretrained = False, requires_grad=True, GPU = GPU)
+    vgg_model = VGGNet(pretrained = False, requires_grad=requires_grad, GPU = GPU)
     
     # Get the structure of FCN8 decoder. 
     fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class) #, drop_layer=drop_layer)
     
-    if vggname is None:
-#        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
-        vggname = bu.uichoosefile(title='Choose VGG file...')
-    if fcnname is None:
-#        fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
-        fcnname = bu.uichoosefile(title='Choose FCN file...')
+#    if vggname is None:
+##        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
+#        vggname = bu.uichoosefile(title='Choose VGG file...')
+#    if fcnname is None:
+##        fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
+#        fcnname = bu.uichoosefile(title='Choose FCN file...')
         
     if load_encoder:
+        if vggname is None:
+            vggname = bu.uichoosefile(title='Choose VGG file...')
         print('Loading encoder state from '+bu.just_filename(bu,vggname)+'...')
         vgg_model.load_state_dict(torch.load(vggname))
     else:
         print('Not loading encoder state...')
 
     if load_decoder:
+        if fcnname is None:
+            fcnname = bu.uichoosefile(title='Choose FCN file...')
         print('Loading decoder state from '+bu.just_filename(bu,fcnname)+'...')
         fcn_model.load_state_dict(torch.load(fcnname))
     else:
