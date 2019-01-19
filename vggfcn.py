@@ -65,6 +65,7 @@ class VGGNet(VGG):
                 param.requires_grad = False
 
         if remove_fc:  # delete redundant fully-connected layer params, can save memory
+            print('removing classifier from VGG...')
             del self.classifier
 
         if show_params:

@@ -28,6 +28,7 @@ import pandas as pd
 import tkinter as tk
 #import gc
 import torch
+from torch.utils.data import Dataset, DataLoader
 
 openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
 
@@ -61,8 +62,18 @@ openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
 # 'time_of_day',
 # 'uichoosedir']
 
-
-
+class BioImage(Dataset):
+    def __init__(self):
+        self.db = DLDB()
+    
+    def __len__(self):
+        return self.db.lmdbget('number_of_tiles')
+    
+    def __getitem__(self, idx):
+        tile = self.db.get_tile_by_number(idx)[0]
+        
+        return tile.data
+        
 
 class DLDB():
     def __init__(self, input_directory = None, visualize = False,
@@ -414,7 +425,8 @@ class DLDB():
             return aminv
 
 
-    def feed_pytorch(self,N=None,maskfile=None,augment=False):
+    def feed_pytorch(self,N=None,maskfile=None,augment=False, \
+                     normalize_wrong=False):
         if type(N) is list:
             tiles = self.get_tile_by_number(N)
             (nx,ny,nz) = tiles[0].data.shape
@@ -433,10 +445,49 @@ class DLDB():
 #            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
 #            np.std(inbatch[:,:,:,i])
         
-        IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
-        dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
-        inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
-        
+        if normalize_wrong == 'lump3':
+            print('Using 3-color lumped normalization...')
+            inbatch = (inbatch - np.mean(inbatch))/np.std(inbatch)
+        else: 
+            IB0 = np.mean(inbatch,axis=(0,1,2),dtype=np.float32)
+            dIB = np.std( inbatch,axis=(0,1,2),dtype=np.float32)
+            inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
+
+            if 'zero' in normalize_wrong:
+                zap = np.zeros_like(IB0)
+            else:
+                zap = IB0
+            
+            
+            print('zap is',zap)
+            
+            if not normalize_wrong:
+                print('normalizing correctly...')
+                pass
+            elif normalize_wrong in ['no red', 'zero red']:
+                print('knocking out the red layer...') # first do correctly...
+                inbatch[:,:,:,0] = zap[0] # set entire R layer to its batch average
+            elif normalize_wrong in ['no green','zero green']:
+                inbatch = (inbatch - IB0) / dIB  # per color norm, via broadcasting
+                inbatch[:,:,:,1] = zap[1] # set entire G layer to its batch average
+            elif normalize_wrong in  ['no blue','zero blue']:
+                print('knocking out the blue layer...') # first do correctly...
+                inbatch[:,:,:,2] = zap[2] # set entire B layer to its batch average
+            elif normalize_wrong in ['only red','only red and zero']:
+                print('knocking out the green and blue layers...') # first do correctly...
+                inbatch[:,:,:,1] = zap[1] # set entire G layer to its batch average
+                inbatch[:,:,:,2] = zap[2] # set entire B layer to its batch average
+            elif normalize_wrong in ['only green','only green and zero']:
+                print('knocking out the red and blue layers...') # first do correctly...
+                inbatch[:,:,:,0] = zap[0] # set entire R layer to its batch average
+                inbatch[:,:,:,2] = zap[2] # set entire B layer to its batch average
+            elif normalize_wrong in ['only blue','only blue and zero']:
+                print('knocking out the red and green layers...') # first do correctly...
+                inbatch[:,:,:,0] = zap[0] # set entire R layer to its batch average
+                inbatch[:,:,:,1] = zap[1] # set entire G layer to its batch average
+            else:
+                print('Unknown normalization:', normalize_wrong)
+                
         if augment:
             augmatinv = self.get_aug_trans(ntiles,(nx,ny))
             for i in range(ntiles):

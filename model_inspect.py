@@ -48,10 +48,15 @@ class Model():
         #
         import fcn
         
+        self.normalize_wrong = 'lump3'
+        if self.normalize_wrong is 'lump3':
+            print('Using incorrect 3-color lumped normalization...')
+        
         self.batch_size = batch_size
         self.GPU = GPU
         
         self.icurrent = 0
+        self.current_tiles = None
 
         if dldb_path is None:
             dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
@@ -104,13 +109,22 @@ class Model():
     def add_viewer(self,v):
         self.viewers.append(v)
         
-    def get_new_data(self):
+    def get_new_data(self, reload=None):
+        
         if not self.maskfile:
             maskfile = 'test3_cancer.tif'
-        Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
+        
+        print('reload is',reload)
+        if not reload or not self.current_tiles:
+            Nlist = list(np.random.randint(0,high=1260,size=self.batch_size))
+            self.current_tiles = Nlist
+        else:
+            Nlist = self.current_tiles
+
         self.input, self.masks = self.grab_new_batch(N=Nlist,\
                                          maskfile=maskfile)
-        self.icurrent = 0
+        if not reload:
+            self.icurrent = 0
         
     def next_example(self):
         self.icurrent = (self.icurrent + 1) % self.batch_size
@@ -192,7 +206,7 @@ class Model():
 #----------------------
         global FEATURE_MAPS
         chandle = mp.register_forward_hook(capture_data_hook)
-        _ = self.net(self.input)
+        self.net(self.input)
         chk = FEATURE_MAPS
         print(chk.shape)
         for fmap in self.selected_feature_maps:
@@ -236,12 +250,14 @@ class Model():
     def get_net(self):
         return self.net
     
-    def grab_new_batch(self,N=None, maskfile = None, augment = False, boundary_kernel=None):
+    def grab_new_batch(self,N=None, maskfile = None, augment = False, \
+                       boundary_kernel=None):
 
         if N == None:
             N=list(np.random.randint(0,size=self.batch_size,high=1260))    
 
-        indata, y = self.db.feed_pytorch(N=N, maskfile=maskfile)
+        indata, y = self.db.feed_pytorch(N=N, maskfile=maskfile,\
+                                        normalize_wrong=self.normalize_wrong)
         
         if self.GPU:
             indata = indata.cuda()
@@ -310,7 +326,7 @@ class Model():
                 r0,r1,c0,c1 = get_feature_corners(i)
                 disp[examp,r0:r1,c0:c1] = feature_maps[examp,i,:,:]
                 
-        if point_clicked is not None:
+        if point_clicked:
             px, py = point_clicked
             ifm1 = int(np.floor(py/(sqsize+brdr))*ncols)
             ifm2 = int(np.floor(px/(sqsize+brdr)))
@@ -422,6 +438,36 @@ class View(Tk.Frame):
         self.grabButton = Tk.Button(self.frame2, text="New Data", command=self.grab)
         self.grabButton.pack(side="top", fill=Tk.BOTH)
 
+
+        normList = ['correct', 'lump3','no red', 'no green', 'no blue', \
+                    'only red', 'only green', 'only blue',
+                    'zero red', 'zero green', 'zero blue',\
+                    'only red and zero', 'only green and zero', \
+                    'only blue and zero']
+        self.normname = Tk.StringVar(master=self.frame2, name='norm')
+        self.normname.set(self.model.normalize_wrong)
+        
+        def change_norm_callback(*_, var=self.normname):
+            print(var.get())
+            if var.get() != 'correct':
+                self.model.normalize_wrong = var.get()
+            else:
+                print('setting to false')
+                self.model.normalize_wrong = False
+            
+            self.model.get_new_data(reload=True)
+            self.model.set_feature_map_hook(self.v)
+            self.update_plots()
+                
+        self.normname.trace_add("write", change_norm_callback)
+        self.normmenu = Tk.OptionMenu(self.frame2, self.normname, *normList)
+        self.normmenu.pack(side="top", fill = Tk.BOTH)
+
+#        self.normButton = Tk.Button(self.frame2, \
+#                                    text='Norm ok' if not self.model.normalize_wrong \
+#                                    else 'Norm wrong', command=self.toggle_norm)
+#        self.normButton.pack(side="top", fill=Tk.BOTH)
+        
         self.quitButton = Tk.Button(self.frame2, text="Quit", command=self.quitit)
         self.quitButton.pack(side="top", fill=Tk.BOTH)
 
@@ -448,9 +494,22 @@ class View(Tk.Frame):
             
     def zero_callback(self):
         self.model.set_selected_feature_map_weights_to_zero(self.v)
+        self.update_plots()
 
     def grab(self):
         self.model.get_new_data()
+        self.update_plots()
+    
+    def toggle_norm(self):
+        if not self.model.normalize_wrong:
+            self.model.normalize_wrong = 'lump3'
+        else:
+            self.model.normalize_wrong = False
+            
+        self.normButton["text"] ='Norm ok' if not self.model.normalize_wrong \
+                                    else 'Norm wrong'
+        self.model.get_new_data(reload=True)
+        self.model.set_feature_map_hook(self.v)
         self.update_plots()
     
     def clear(self):
@@ -497,11 +556,11 @@ class View(Tk.Frame):
 #            return 0
         
         try:
-            check_mainloop()
-            self.parent.after(5000, check_mainloop )            
+#            check_mainloop()
+#            self.parent.after(5000, check_mainloop )            
             self.parent.destroy()
             
-            print('Destroyed window...waiting 5 seconds')
+#            print('Destroyed window...waiting 5 seconds')
         except: 
             pass
         
