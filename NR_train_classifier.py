@@ -180,7 +180,7 @@ if __name__ == "__main__":
     if reload:
 #        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
 #        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
-        print('using VGGcurrent and FCNcurrent...')
+        print('using VGGcurrclass...')
         vgg_model.load_state_dict(torch.load('VGGcurrclass'))
     
     
@@ -203,7 +203,7 @@ if __name__ == "__main__":
     early = not reload
     
     vgg_model.train()
-    for iteration in range(50000):
+    for iteration in range(100000):
         
         optimizer.zero_grad()
         output = torch.squeeze(vgg_model(indata))
