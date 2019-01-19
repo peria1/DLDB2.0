@@ -125,7 +125,7 @@ if __name__ == "__main__":
 #    ck = None
 #    print('turned off circle kernel boundary ignorer...')
     
-    show_plots = True
+    show_plots = False
     GPU = True
     pretrained = False
 
@@ -180,8 +180,8 @@ if __name__ == "__main__":
     if reload:
 #        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
 #        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
-        print('using VGGcurrent and FCNcurrent...')
-        vgg_model.load_state_dict(torch.load('VGGcurrent'))
+        print('using VGGcurrclass...')
+        vgg_model.load_state_dict(torch.load('VGGcurrclass'))
     
     
     pw = torch.as_tensor(8.).type(torch.float).cuda()
@@ -203,7 +203,7 @@ if __name__ == "__main__":
     early = not reload
     
     vgg_model.train()
-    for iteration in range(4000):
+    for iteration in range(100000):
         
         optimizer.zero_grad()
         output = torch.squeeze(vgg_model(indata))
