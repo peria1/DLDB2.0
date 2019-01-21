@@ -80,7 +80,7 @@ fcn_name = '/media/bill/Windows1/Users/' + \
                   'DLDBproject/FCN20181205_2144'
 
 net = fcn.load_model(n_class=n_class,\
-                      vggname=vggname,fcnname=fcn_name).eval().cuda()
+                      load_encoder=False,fcnname=fcn_name).eval().cuda()
 
 vggcopynet = fcn.load_model(n_class=3, load_encoder=False, fcnname='preFCN20181128_1130')
 
@@ -92,6 +92,7 @@ for k in vggcopynet.state_dict().keys():
 
 net.load_state_dict(new_dict)        
     
+#torch.save(net.state_dict(),'redo_translate_for_165' + db.date_for_filename())
 
 def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=None):
 
