@@ -455,7 +455,7 @@ class DLDB():
             
 
             if normalization == 'correct':
-                print('normalizing correctly...')
+#                print('normalizing correctly...')
                 pass
             elif normalization in ['no red', 'zero red']:
                 print('knocking out the red layer...') # first do correctly...

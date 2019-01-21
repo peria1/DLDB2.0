@@ -40,8 +40,8 @@ import matplotlib.pyplot as plt
 import billUtils as bu
 import sys
 
-from vggfcn import VGGNet, FCN8s
-#import fcn
+#from vggfcn import VGGNet, FCN8s
+import fcn
 
 #from matplotlib.backends.backend_pdf import PdfPages
 #import sys
@@ -153,19 +153,17 @@ if __name__ == "__main__":
     db = dldb.DLDB(pth)
     
     batch_size, n_class, h, w = 20, 1, 256, 256
- 
-    if not pretrained:
-        print('using untrained VGG...')
-        
-    vgg_model = VGGNet(pretrained = pretrained, requires_grad=True, GPU = GPU)
-    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class)
+         
+#    vgg_model = VGGNet(pretrained = pretrained, requires_grad=True, GPU = GPU)
+#    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class)
 
+    fcn_model = fcn.load_model(freeze_encoder=True)
     reload = 'reload' in sys.argv
     if reload:
 #        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
 #        fcn_model.load_state_dict(torch.load(bu.uichoosefile()))
-        print('using VGGcurrent and FCNcurrent...')
-        vgg_model.load_state_dict(torch.load('VGGcurrent'))
+        print('using FCNcurrent...')
+#        vgg_model.load_state_dict(torch.load('VGGcurrent'))
         fcn_model.load_state_dict(torch.load('FCNcurrent'))
     
     
@@ -230,7 +228,7 @@ if __name__ == "__main__":
         
         if iteration % 20 == 0:
             torch.save(fcn_model.state_dict(),'FCNcurrent')
-            torch.save(vgg_model.state_dict(),'VGGcurrent')
+#            torch.save(vgg_model.state_dict(),'VGGcurrent')
 
             if len(saveloss) <= 20:
                 print("iteration {}, loss {:.3f}".format(iteration, loss.item()))
@@ -253,7 +251,7 @@ if __name__ == "__main__":
             
             
     torch.save(fcn_model.state_dict(),'FCN' + db.date_for_filename())
-    torch.save(vgg_model.state_dict(),'vgg' + db.date_for_filename())
+#    torch.save(vgg_model.state_dict(),'vgg' + db.date_for_filename())
         
         
 
