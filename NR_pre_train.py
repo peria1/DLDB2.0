@@ -79,7 +79,7 @@ if __name__ == "__main__":
     
     batch_size, n_class, h, w = 20, 3, 256, 256
 
-    fcn_model = fcn.load_model(GPU=GPU, n_class=n_class,load_decoder=False, requires_grad=False)
+    fcn_model = fcn.load_model(GPU=GPU, n_class=n_class, load_decoder=False, freeze_encoder=True)
     
     criterion = nn.MSELoss() 
     optimizer = optim.SGD(fcn_model.parameters(), lr=1e-3, momentum=0.9)
