@@ -438,12 +438,7 @@ class DLDB():
             if N is None:
                 N = 100
             inbatch = self.get_minibatch(N)
-            ntiles = N
-            #nsamp, nx, ny, nz) = inbatch.shape
-        
-#        for i in range(3):
-#            inbatch[:,:,:,i] = (inbatch[:,:,:,i] - np.mean(inbatch[:,:,:,i]))/ \
-#            np.std(inbatch[:,:,:,i])
+            ntiles = N        
         
         if normalization == 'lump3':
             print('Using 3-color lumped normalization...')
@@ -458,9 +453,7 @@ class DLDB():
             else:
                 zap = IB0
             
-            
-            print('zap is',zap)
-            
+
             if normalization == 'correct':
                 print('normalizing correctly...')
                 pass
