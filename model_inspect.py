@@ -19,7 +19,6 @@ import billUtils as bu
 import dldb
 from dldb import dlTile
 
-#import torch
 import copy
 import traceback as tb
 
@@ -48,8 +47,8 @@ class Model():
         #
         import fcn
         
-        self.normalize_wrong = 'lump3'
-        if self.normalize_wrong is 'lump3':
+        self.normalization = 'lump3'
+        if self.normalization is 'lump3':
             print('Using incorrect 3-color lumped normalization...')
         
         self.batch_size = batch_size
@@ -59,10 +58,10 @@ class Model():
         self.current_tiles = None
 
         if dldb_path is None:
-            dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
-#            dldb_path = '/media/bill/Windows1/Users/'+\
-#            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-#            'DLDBproject/DLDB_20181015_0552'
+#            dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
+            dldb_path = '/media/bill/Windows1/Users/'+\
+            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+            'DLDBproject/DLDB_20181015_0552'
 
         if fcn_name is None:
 #
@@ -80,14 +79,30 @@ class Model():
             fcn_name = '/media/bill/Windows1/Users/' + \
                               'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
                               'DLDBproject/preFCN20181128_1130'
+#
+#   The following fcn is the one I made after discovering that loading the state_dict from an FCN file
+#   actually also overwrites the VGG coefficients. The fcn.py code still behaves that way, but now
+#   I use the requires_grad  = False option to freeze the VGG part of the model, i.e. to freeze the "left-
+#   half of the U" as Roger says it. 
+#
+#            
+#            fcn_name = '/media/bill/Windows1/Users/' + \
+#                              'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+#                              'DLDBproject/preFCN20190119_1603'
+#
+#   Ok, but what I failed to realize here is that preFCN20181128_1130 is already the model I want to inspect
+#     because incredibly, it has the small number of "salient cancer features" in its encoder. 
+#
                               
         self.maskfile = maskfile                      
                               
         self.net = fcn.load_model(n_class=n_class,\
-                              fcnname=fcn_name,vggname=vggname).eval()
-        if self.GPU:
-            self.net.cuda()
+                          fcnname=fcn_name,vggname=vggname, load_encoder=False).eval().cuda()
         
+# Since this is about inspection and not optimizing, I can turn off all the gradients. 
+        for p in self.net.parameters():
+            p.requires_grad = False
+       
         self.module_names = [name for name, module in self.net.named_modules()\
                              if len(module._modules) == 0]
         self.modules = [module for name, module in self.net.named_modules()\
@@ -243,6 +258,11 @@ class Model():
         if type(FEATURE_MAPS) is not str:
             self.make_feature_map_display(FEATURE_MAPS) 
             fm = self.feature_display[self.icurrent,:,:]
+            
+            FMsum = np.sum(FEATURE_MAPS[self.icurrent, :, :, :],axis=(1,2))
+            print('largest feature is', np.argmax(FMsum))
+
+            
             return fm
         else:
             return np.random.uniform(size=(256,256))  #([[1,0],[0,1]])
@@ -253,11 +273,16 @@ class Model():
     def grab_new_batch(self,N=None, maskfile = None, augment = False, \
                        boundary_kernel=None):
 
+
+#        print('Fixed N!')
+#        N = [ 968,  521 , 419 , 737 ,1140, 1240,  677, 1178,  694,  255, \
+#             281,  451, 1182,  527,  203,  156,  893,  398,  975, 1066]
+        
         if N == None:
             N=list(np.random.randint(0,size=self.batch_size,high=1260))    
 
         indata, y = self.db.feed_pytorch(N=N, maskfile=maskfile,\
-                                        normalize_wrong=self.normalize_wrong)
+                                        normalization=self.normalization)
         
         if self.GPU:
             indata = indata.cuda()
@@ -319,7 +344,11 @@ class Model():
                 disp[i, fat_top :fat_bottom,  fat_left :fat_right] = black
                 disp[i, tall_top:tall_bottom, tall_left:tall_right] = black
 
-        print('about to initialize disp...')    
+        print('about to initialize disp...')   
+        #
+        # Set each example's entire map display to each example's max. This will 
+        #  be the border color; making it max will help borders stand out. 
+        #
         for examp in range(nexamp):
             disp[examp,:,:] = np.max(feature_maps[examp,:,:,:]) # per example, for max contrast
             for i in range(ndepth):
@@ -341,6 +370,7 @@ class Model():
             highlight_border(i)
             
         self.feature_display = disp
+        
 
 def best_square(n):
     from sympy import factorint
@@ -371,6 +401,7 @@ def capture_data_hook(self, input, output):
     global FEATURE_MAPS, IDX
     print('Hooked!')
     FEATURE_MAPS = output.cpu().detach().numpy()
+    print(FEATURE_MAPS.shape)
         
 def summary_hook(self, input, output):
     print('input size:',input[0].size())
@@ -445,15 +476,16 @@ class View(Tk.Frame):
                     'only red and zero', 'only green and zero', \
                     'only blue and zero']
         self.normname = Tk.StringVar(master=self.frame2, name='norm')
-        self.normname.set(self.model.normalize_wrong)
+        self.normname.set(self.model.normalization)
         
         def change_norm_callback(*_, var=self.normname):
             print(var.get())
-            if var.get() != 'correct':
-                self.model.normalize_wrong = var.get()
-            else:
-                print('setting to false')
-                self.model.normalize_wrong = False
+            self.model.normalization = var.get()
+#            if var.get() != 'correct':
+#                self.model.normalize_wrong = var.get()
+#            else:
+#                print('setting to false')
+#                self.model.normalize_wrong = False
             
             self.model.get_new_data(reload=True)
             self.model.set_feature_map_hook(self.v)
@@ -500,18 +532,18 @@ class View(Tk.Frame):
         self.model.get_new_data()
         self.update_plots()
     
-    def toggle_norm(self):
-        if not self.model.normalize_wrong:
-            self.model.normalize_wrong = 'lump3'
-        else:
-            self.model.normalize_wrong = False
-            
-        self.normButton["text"] ='Norm ok' if not self.model.normalize_wrong \
-                                    else 'Norm wrong'
-        self.model.get_new_data(reload=True)
-        self.model.set_feature_map_hook(self.v)
-        self.update_plots()
-    
+#    def toggle_norm(self):
+#        if not self.model.normalization:
+#            self.model.normalization = 'lump3'
+#        else:
+#            self.model.normalization = False
+#            
+#        self.normButton["text"] ='Norm ok' if not self.model.normalization \
+#                                    else 'Norm wrong'
+#        self.model.get_new_data(reload=True)
+#        self.model.set_feature_map_hook(self.v)
+#        self.update_plots()
+#    
     def clear(self):
         self.ax0.clear()
         self.fig.canvas.draw()
