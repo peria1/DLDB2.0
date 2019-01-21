@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torchvision import models
 from torchvision.models.vgg import VGG
+import copy
 
 class FCN8s(nn.Module):
 
@@ -126,15 +127,19 @@ def make_layers(cfg, batch_norm=False):
             in_channels = v
     return nn.Sequential(*layers)
 
-def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
-               vggname=None, fcnname=None, requires_grad = True): #, drop_layer=True):
-#    print(fcnname)
-#    print('HEY!!! No drop layer in this version!')
+def load_model(GPU=True,n_class=1,load_encoder=False,load_decoder=True,\
+               vggname=None, fcnname=None, \
+               requires_grad = True, freeze_encoder = False): #, drop_layer=True):
+    
+    if requires_grad == freeze_encoder:
+        print('requires_grad is',requires_grad,', freeze_encoder is ',freeze_encoder,'...this is inconsistent.')
+
+    requires_grad = requires_grad or not freeze_encoder
     # Get the structure of VGG. I don't want to use their pre-trained model (ImageNet?)
     vgg_model = VGGNet(pretrained = False, requires_grad=requires_grad, GPU = GPU)
     
     # Get the structure of FCN8 decoder. 
-    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class) #, drop_layer=drop_layer)
+    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class) 
     
 #    if vggname is None:
 ##        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
@@ -151,7 +156,8 @@ def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
     else:
         print('Not loading encoder state...')
 
-    if load_decoder:
+    if load_decoder:   # Note that loading the state_dict here will overwrite 
+                       # any state that is already in the encoder.
         if fcnname is None:
             fcnname = bu.uichoosefile(title='Choose FCN file...')
         print('Loading decoder state from '+bu.just_filename(bu,fcnname)+'...')
@@ -159,4 +165,14 @@ def load_model(GPU=True,n_class=1,load_encoder=True,load_decoder=True,\
     else:
         print('Not loading decoder state...')
 
+    if load_encoder:   # if True, this will copy the encoder from vgg_model into fcn_model
+        new_dict = copy.deepcopy(fcn_model.state_dict())
+        for k in vgg_model.state_dict().keys():
+            if 'pretrained' in k:
+                new_dict[k] = copy.deepcopy(vgg_model.state_dict()[k])
+        
+        fcn_model.load_state_dict(new_dict)        
+               
+        
+        
     return fcn_model
