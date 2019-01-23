@@ -48,6 +48,8 @@ import fcn
 
 import dldb
 from dldb import dlTile
+
+import copy
 #
 #
 #------------------------------------------
@@ -157,7 +159,13 @@ if __name__ == "__main__":
 #    vgg_model = VGGNet(pretrained = pretrained, requires_grad=True, GPU = GPU)
 #    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class)
 
-    fcn_model = fcn.load_model(freeze_encoder=True)
+    fcn_name = '/media/bill/Windows1/Users/' + \
+                      'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+                      'DLDBproject/redo_translate_for_16520190121_0825'
+
+    fcn_model = fcn.load_model(n_class=n_class,fcnname=fcn_name,\
+                               freeze_encoder=True, load_decoder=False)
+    
     reload = 'reload' in sys.argv
     if reload:
 #        vgg_model.load_state_dict(torch.load(bu.uichoosefile()))
@@ -185,7 +193,8 @@ if __name__ == "__main__":
 
     early = not reload
     
-    fcn_model.train()
+    fcn_model = fcn_model.train()
+#    starting_model = copy.deepcopy(fcn_model)
     for iteration in range(50000):
         
         optimizer.zero_grad()
