@@ -116,6 +116,8 @@ class Model():
         
         self.selected_feature_maps = []
         self.viewers = []
+        
+        self.largest = None # largest feature map sum in the current set of maps
                 
     def update_viewers(self):
         for v in self.viewers:
@@ -260,7 +262,8 @@ class Model():
             fm = self.feature_display[self.icurrent,:,:]
             
             FMsum = np.sum(FEATURE_MAPS[self.icurrent, :, :, :],axis=(1,2))
-            print('largest feature is', np.argmax(FMsum))
+            self.largest = np.argmax(FMsum)
+#            print('largest feature is', np.argmax(FMsum))
 
             
             return fm
@@ -563,7 +566,7 @@ class View(Tk.Frame):
         self.ax3.imshow(self.model.get_mask_for_display())
         img_fm = self.model.get_feature_map_for_display()
         self.ax4.imshow(img_fm)
-        self.ax4.set_title(self.v.get())
+        self.ax4.set_title(self.v.get() + ': largest feature is ' +str(self.model.largest))
         self.ax1.set_title(str(self.model.icurrent))
         self.fig.canvas.draw()
         

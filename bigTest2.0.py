@@ -98,6 +98,8 @@ if __name__ == "__main__":
     m = Model(batch_size=batch_size, GPU=GPU, fcn_name=fcnname, vggname=vggname,\
               n_class=n_class)
     fcn_model = m.net.cuda().eval()
+    for p in fcn_model.parameters():
+        p.requires_grad = False
     
     instructions = 'Choose tissue folder...don''t click Ok until window looks blank,,,'
     dir_to_process = bu.uichoosedir(title=instructions) + '/*.tif'

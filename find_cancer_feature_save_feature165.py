@@ -71,34 +71,26 @@ db = dldb.DLDB(input_directory = dldb_path)
 # So I need to load a cancer detector type model, with n_class=1, and then overwrite the 
 #   pretrained part of the network with the state_dict of preFCN20181128_1130. 
 #
-#vggname = '/media/bill/Windows1/Users/'+\
-#            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-#            'DLDBproject/vgg20181205_2144'
+vggname = '/media/bill/Windows1/Users/'+\
+            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+            'DLDBproject/vgg20181205_2144'
 #vggname = None
-#fcn_name = '/media/bill/Windows1/Users/' + \
-#                  'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-#                  'DLDBproject/FCN20181205_2144'
-#fcn_name = '/media/bill/Windows1/Users/' + \
-#                  'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-#                  'DLDBproject/FCN20190122_0700'
 fcn_name = '/media/bill/Windows1/Users/' + \
                   'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-                  'DLDBproject/redo_translate_for_16520190121_0825'
+                  'DLDBproject/FCN20181205_2144'
 
-net = fcn.load_model(n_class=n_class,fcnname=fcn_name).eval().cuda()
+net = fcn.load_model(n_class=n_class,\
+                      load_encoder=False,fcnname=fcn_name).eval().cuda()
 
-for p in net.parameters():
-    p.requires_grad = False
+vggcopynet = fcn.load_model(n_class=3, load_encoder=False, fcnname='preFCN20181128_1130')
 
-#vggcopynet = fcn.load_model(n_class=3, load_encoder=False, fcnname='preFCN20181128_1130')
-#
-#new_dict = copy.deepcopy(net.state_dict())
-#for k in vggcopynet.state_dict().keys():
-#    if 'pretrained' in k:
-#        print(k)
-#        new_dict[k] = copy.deepcopy(vggcopynet.state_dict()[k])
-#
-#net.load_state_dict(new_dict)        
+new_dict = copy.deepcopy(net.state_dict())
+for k in vggcopynet.state_dict().keys():
+    if 'pretrained' in k:
+        print(k)
+        new_dict[k] = copy.deepcopy(vggcopynet.state_dict()[k])
+
+net.load_state_dict(new_dict)        
     
 #torch.save(net.state_dict(),'redo_translate_for_165' + db.date_for_filename())
 
@@ -249,11 +241,10 @@ if __name__ == '__main__':
     
     plt.figure()
     plt.plot(cpred[ii], fmaps[ii,:])
-    plt.title('model x')
+#    plt.title()
 
     plt.figure()
     plt.plot(cpath[jj], fmaps[jj,:])
-    plt.title('pathologist x')
 
 #   The following correlates very well with cpath. 
 #        plt.plot(cpath[jj], fmaps[jj,165]/(fmaps[jj,430]+fmaps[jj,193]))
