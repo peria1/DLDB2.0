@@ -129,12 +129,10 @@ def make_layers(cfg, batch_norm=False):
 
 def load_model(GPU=True,n_class=1,load_encoder=False,load_decoder=True,\
                vggname=None, fcnname=None, \
-               requires_grad = True, freeze_encoder = False): #, drop_layer=True):
+               freeze_encoder = False): #, drop_layer=True):
     
-    if requires_grad == freeze_encoder:
-        print('requires_grad is',requires_grad,', freeze_encoder is ',freeze_encoder,'...this is inconsistent.')
+    requires_grad = not freeze_encoder
 
-    requires_grad = requires_grad or not freeze_encoder
     # Get the structure of VGG. I don't want to use their pre-trained model (ImageNet?)
     vgg_model = VGGNet(pretrained = False, requires_grad=requires_grad, GPU = GPU)
     
