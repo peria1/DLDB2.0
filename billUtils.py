@@ -112,7 +112,7 @@ def residualSymmTest(dy, x, zero=0.0, showPlot=True):
         dy = np.reshape(dy, (dy.size))
     
     
-    if x.shape != dy.shape:
+    if np.array(x).shape != np.array(dy).shape:
         print(\
       'residual and independent variable must have same dimensions...')
         return None
@@ -120,8 +120,8 @@ def residualSymmTest(dy, x, zero=0.0, showPlot=True):
     if not((dy > zero).any() and  (dy < zero).any()):
         print('residuals do not span ', str(zero), '...')
     
-    xplus  = x(dy >= zero)
-    xminus = x(dy <= zero)
+    xplus  = np.array(x)[dy >= zero]
+    xminus = np.array(x)[dy <= zero]
     
     if (dy == 0).any():
         pass
@@ -210,5 +210,19 @@ def kscirc(x1in,x2in,alpha=0.05):
     
     return h, p, ks
 
+def poly_model(x, y, deg, xfit = None):
+    try:
+        assert np.asarray(x).shape == np.asarray(y).shape
+    except AssertionError:
+        return np.NaN
+    
+    mu = (np.nanmean(x), np.nanstd(x))
+    ok = [xo is not np.NaN and yo is not np.NaN for xo,yo in zip(x,y)]
+    
+    c = np.polyfit((np.array(x)[ok]-mu[0])/mu[1], np.array(y)[ok], deg)
+    if not xfit:
+        xfit = x 
+        
+    return np.polyval(c, (xfit-mu[0])/mu[1])
 
     
