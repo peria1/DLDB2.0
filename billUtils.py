@@ -225,4 +225,35 @@ def poly_model(x, y, deg, xfit = None):
         
     return np.polyval(c, (xfit-mu[0])/mu[1])
 
+"""
+The following computes the information entropy associated with nearest-neighbor
+ gradients in an image. 
+"""
+
+def delentropy(im):    
+    if len(im.shape) > 2:
+        ret = []
+        for i in range(im.shape[2]):
+            ret.append(delentropy(im[:,:,i]))
+        return np.array(ret)
     
+    i16 = np.int16(im)
+    dx = np.int16((np.roll(i16,1,axis=1) - np.roll(i16,-1,axis=1))/2.0)
+    dy = np.int16((np.roll(i16,1,axis=0) - np.roll(i16,-1,axis=0))/2.0)
+    
+    dx = dx[1:-1,1:-1]
+    dy = dy[1:-1,1:-1]
+    
+    N = np.prod(dx.shape)
+    
+    edges = np.arange(-256,256)
+    H, xedges, yedges = np.histogram2d(dx.reshape(N), dy.reshape(N), bins=(edges, edges))
+    p = H/np.sum(H)
+    ok = [nz > 0 for nz in p]
+    return -np.sum(p[ok] * np.log2(p[ok]))
+
+    
+    
+    
+    
+
