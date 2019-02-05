@@ -75,15 +75,15 @@ db = dldb.DLDB(input_directory = dldb_path)
 #            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
 #            'DLDBproject/vgg20181205_2144'
 #vggname = None
-#fcn_name = '/media/bill/Windows1/Users/' + \
-#                  'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-#                  'DLDBproject/FCN20181205_2144'
+fcn_name = '/media/bill/Windows1/Users/' + \
+                  'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+                  'DLDBproject/FCN20181205_2144'
 #fcn_name = '/media/bill/Windows1/Users/' + \
 #                  'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
 #                  'DLDBproject/FCN20190122_0700'
-fcn_name = '/media/bill/Windows1/Users/' + \
-                  'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-                  'DLDBproject/redo_translate_for_16520190121_0825'
+#fcn_name = '/media/bill/Windows1/Users/' + \
+#                  'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+#                  'DLDBproject/redo_translate_for_16520190121_0825'
 
 net = fcn.load_model(n_class=n_class,fcnname=fcn_name).eval().cuda()
 
@@ -208,8 +208,38 @@ def lit_up_hook(self, input, output):
     
     nexamp, nfm, ny, nx = pred.shape
     FMsum = np.sum(pred, axis = (2,3))
+    
 
     print('largest features are', np.argmax(FMsum,axis=1))
+
+    return 
+
+def show_ranges_hook(self, input, output):
+    global FEATURE_MAPS
+    pred = output.cpu().detach().numpy()
+    
+    for i in input:
+        print(type(input))
+        
+    print('min is',np.min(pred),', max is',np.max(pred),', std is',np.std(pred))
+    FEATURE_MAPS = np.std(pred,axis=(2,3))
+    
+
+def delentropy_hook(self, input, output):
+    global FEATURE_MAPS
+    pred = output.cpu().detach().numpy()
+    
+    
+    nexamp, nfm, ny, nx = pred.shape
+    pred = np.transpose(pred, axes=(0,2,3,1))
+    pred = (pred-np.min(pred))/(np.max(pred)-np.min(pred))*128
+    FMent = np.zeros((nexamp, nfm))
+    for i in range(nexamp):
+        FMent[i,:] = bu.delentropy(pred[i,:,:,:])
+                
+    FEATURE_MAPS = FMent
+    
+    print('largest features are', np.argmax(FMent,axis=1))
 
     return 
 
@@ -230,8 +260,12 @@ if __name__ == '__main__':
     fmaps = np.zeros((batch_size*ntry, 512))
     
     for i in range(ntry):
+        print('Processing batch',i+1,'of',ntry)
+        
         indata,y = grab_new_batch()
-        hook = modules[pick].register_forward_hook(lit_up_hook)
+#        hook = modules[pick].register_forward_hook(lit_up_hook)
+        hook = modules[pick].register_forward_hook(delentropy_hook)
+#        hook = modules[pick].register_forward_hook(show_ranges_hook)
         out = torch.sigmoid(net(indata))
         hook.remove()
 
