@@ -26,8 +26,9 @@ import torch
 import matplotlib.pyplot as plt
 
 import copy
+import gc
 
-FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
+FEATURE_MAPS = None #'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
 
 n_class = 1
@@ -132,8 +133,8 @@ def sigmoid(x):
 
 def accum_pdf_hook(self, input, output):
     global FEATURE_MAPS
+#        
     pred = output.cpu().detach().numpy()
-    
     
     nexamp, nfm, ny, nx = pred.shape
     pred = np.transpose(pred, axes=(0,2,3,1))
@@ -149,16 +150,23 @@ def accum_pdf_hook(self, input, output):
     dx = dx[:,1:-1,1:-1,:]
     dy = dy[:,1:-1,1:-1,:]
 #    Oops now it's (nexamp, ny-2,nx-2,nfm)
-    H = np.zeros((nexamp,nfm,509,509))
+#    H = np.zeros((nexamp,nfm,509,509))
+    if isinstance(FEATURE_MAPS, type(None)):
+        FEATURE_MAPS = np.zeros((nexamp,nfm,509,509),dtype=np.uint16)
+        print('created zeros for FEATURE_MAPS...')
+
     for i in range(nexamp):
         for j in range(nfm):
-            H[i,j,:,:], xedges, yedges = np.histogram2d(dx[:,:,:,j].flatten(),\
-                                                         dy[:,:,:,j].flatten(),\
-                                                         bins=(edges, edges))
+            FEATURE_MAPS[i,j,:,:], xedges, yedges = \
+                        np.histogram2d(dx[i,:,:,j].flatten(),\
+                                       dy[i,:,:,j].flatten(),\
+                                       bins=(edges, edges))
 
-    FEATURE_MAPS = H
-
-
+#    FEATURE_MAPS = H
+    
+#
+        
+    print(id(FEATURE_MAPS))
     
     return
 
@@ -173,9 +181,9 @@ if __name__ == '__main__':
     pick = 29 # this yields pretrained_net 28
     print('Examining feature maps of',mnames[pick])
 
-    ntry = 1
-    cpred = np.zeros(batch_size*ntry)
-    cpath = np.zeros_like(cpred)
+    ntry = 20
+#    cpred = np.zeros(batch_size*ntry)
+#    cpath = np.zeros_like(cpred)
 #    Make bins for cpath and cpred. One bin is for exactly zero, then 10 more from 
 #    0+ up to 1. 
     nnzbins = 10
@@ -197,22 +205,38 @@ if __name__ == '__main__':
         cpath = np.mean(np.mean(y.cpu().detach().numpy(),axis=-1),axis=-1)
         pbins = np.trunc(cpath*nnzbins) + 1
         pbins[cpath==0] = 0
+        pbins[cpath==1] = nnzbins
         pbins = np.uint8(pbins)
 
 #        cpred[(i*batch_size):(i*batch_size + batch_size)] = \
         cpred = np.mean(np.mean((out.cpu().detach().numpy() > 0.9),axis=-1),axis=-1)
         mbins = np.trunc(cpred*nnzbins) + 1
         mbins[cpred==0] = 0
+        mbins[cpred==1] = nnzbins
         mbins = np.uint8(mbins)
 
-        if not pmaps:
-            pmaps = np.zeros((nnzbins+1,*FEATURE_MAPS.shape[1:]))
-            mmaps = np.zeros((nnzbins+1,*FEATURE_MAPS.shape[1:]))
+        if pmaps is None:
+            pmaps = np.zeros((nnzbins+1,*FEATURE_MAPS.shape[1:]),dtype=np.uint16)
+            mmaps = np.zeros((nnzbins+1,*FEATURE_MAPS.shape[1:]),dtype=np.uint16)
         
         for i in range(batch_size):
             pmaps[pbins[i],:,:,:] += FEATURE_MAPS[i,:,:,:]
             mmaps[mbins[i],:,:,:] += FEATURE_MAPS[i,:,:,:]
 
+
+    nbins, nfm, ny, nx = pmaps.shape
+
+    def entropy(C):
+        not_zero = C > 0
+        denom = np.sum(C)
+        p = C[not_zero]/denom
+        e = -np.sum(p*np.log2(p))
+        return e 
+    
+    ent = np.zeros((nbins,nfm))
+    for i in range(nbins):
+        for j in range(nfm):
+            pentropy[i,j] = entropy()
 
 #        fmaps[(i*batch_size):(i*batch_size + batch_size),:] = FEATURE_MAPS
         
