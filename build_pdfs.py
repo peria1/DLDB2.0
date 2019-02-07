@@ -181,7 +181,7 @@ if __name__ == '__main__':
     pick = 29 # this yields pretrained_net 28
     print('Examining feature maps of',mnames[pick])
 
-    ntry = 20
+    ntry = 100
 #    cpred = np.zeros(batch_size*ntry)
 #    cpath = np.zeros_like(cpred)
 #    Make bins for cpath and cpred. One bin is for exactly zero, then 10 more from 
@@ -196,19 +196,17 @@ if __name__ == '__main__':
         print('Processing batch',i+1,'of',ntry)
         
         indata,y = grab_new_batch()
-#        hook = modules[pick].register_forward_hook(lit_up_hook)
+
         hook = modules[pick].register_forward_hook(accum_pdf_hook)
         out = torch.sigmoid(net(indata))
         hook.remove()
 
-#        cpath[(i*batch_size):(i*batch_size + batch_size)] = \
         cpath = np.mean(np.mean(y.cpu().detach().numpy(),axis=-1),axis=-1)
         pbins = np.trunc(cpath*nnzbins) + 1
         pbins[cpath==0] = 0
         pbins[cpath==1] = nnzbins
         pbins = np.uint8(pbins)
 
-#        cpred[(i*batch_size):(i*batch_size + batch_size)] = \
         cpred = np.mean(np.mean((out.cpu().detach().numpy() > 0.9),axis=-1),axis=-1)
         mbins = np.trunc(cpred*nnzbins) + 1
         mbins[cpred==0] = 0
@@ -233,10 +231,32 @@ if __name__ == '__main__':
         e = -np.sum(p*np.log2(p))
         return e 
     
+    pentropy = np.zeros((nbins, nfm))
+    mentropy = np.zeros((nbins, nfm))
+    ppdf = np.zeros((nbins, nfm))
+    mpdf = np.zeros((nbins, nfm))
+    
     ent = np.zeros((nbins,nfm))
     for i in range(nbins):
         for j in range(nfm):
-            pentropy[i,j] = entropy()
+            pentropy[i,j] = entropy(pmaps[i,j,:,:])
+            mentropy[i,j] = entropy(mmaps[i,j,:,:])
+#            ppdf[i,j] = pmaps[i,j,:,:]/np.sum(pmaps[i,j,:,:])
+
+
+    ppdf = pmaps / np.sum(pmaps,axis=(2,3),keepdims=True)
+    mpdf = mmaps / np.sum(mmaps,axis=(2,3),keepdims=True)
+
+
+    def KLdiv(p,q):
+        ok = np.logical_and(p > 0, q > 0);
+        return np.sum(p[ok]*np.log2(p[ok]/q[ok]))
+    
+    kld = np.zeros((nbins, nfm))
+    for i in range(nbins):
+        for j in range(nfm):
+            kld[i,j] = KLdiv(mpdf[i,j,:,:],mpdf[0,j,:,:])
+            
 
 #        fmaps[(i*batch_size):(i*batch_size + batch_size),:] = FEATURE_MAPS
         
