@@ -6,38 +6,6 @@ Created on Fri Feb 15 15:39:37 2019
 @author: bill
 """
 
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 11 11:59:48 2018
-
-@author: bill
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 29 12:56:53 2018
-
-@author: bill
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Aug 26 07:13:41 2018
-
-@author: bill
-"""
-
-# -*- coding: utf-8 -*-
-#
-# Copied from github: https://github.com/pochih/FCN-pytorch/blob/master/python/fcn.py
-#
-#  This is the pared down and evolved version of FCNpytorchFromGithub.py
-#
-#
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -201,13 +169,13 @@ if __name__ == "__main__":
     params = [p for p in fcn_model.parameters()]
 #    starting_model = copy.deepcopy(fcn_model)
     for iteration in range(50000):
-        
         optimizer.zero_grad()
         output = fcn_model(indata)
     #       output = torch.sigmoid(output) # needed for use in plain BCELoss, no logits. 
         if iteration == 0:
             if GPU:
                 output = output.cuda()
+
         regularization_loss = 0
         with torch.enable_grad():
             pixloss = criterion(output,y)
@@ -218,20 +186,29 @@ if __name__ == "__main__":
                 regularization_loss += torch.sum(torch.abs(param))
             loss = c2 + L1_alpha * regularization_loss
         
-#        count = 0
-#        while (torch.isnan(loss) and count < 10):
-#            print('ARGH! Loss is NaN...trying new data...')
-#            indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
-#            count+=1
-#            output = fcn_model(indata)
-#            c2 = criterion(output,y)
-#            lst = lstar(torch.sigmoid(output),y,pw)
-#            pixloss = c2 + lst
-#            loss = torch.mean(pixloss)
-#
-#
-#        if count >= 10:
-#            break
+        count = 0
+        while (torch.isnan(loss) and count < 10):
+            print('ARGH! Loss is NaN...trying new data...')
+            indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
+            optimizer.zero_grad()
+            output = fcn_model(indata)
+            
+            regularization_loss = 0
+            with torch.enable_grad():
+                pixloss = criterion(output,y)
+                lst = lstar(output,y,pw)
+                c2 = torch.mean(pixloss + lst)
+                
+                for param in fcn_model.parameters():
+                    regularization_loss += torch.sum(torch.abs(param))
+                loss = c2 + L1_alpha * regularization_loss
+                count+=1
+    
+    
+        if count >= 10:
+            print('More than 10 batches yielded NaNs, bailing...')
+            torch.save(fcn_model.state_dict(),'FCN' + db.date_for_filename())
+            break
 #        
         loss.backward()
         saveloss.append(loss.item())
