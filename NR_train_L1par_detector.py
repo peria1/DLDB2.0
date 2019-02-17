@@ -207,7 +207,7 @@ if __name__ == "__main__":
     
         if count >= 10:
             print('More than 10 batches yielded NaNs, bailing...')
-            torch.save(fcn_model.state_dict(),'FCN' + db.date_for_filename())
+            torch.save(fcn_model.state_dict(),'FCNbail' + db.date_for_filename())
             break
 #        
         loss.backward()
