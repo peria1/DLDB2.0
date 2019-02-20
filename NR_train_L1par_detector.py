@@ -140,6 +140,8 @@ if __name__ == "__main__":
                                freeze_encoder=False, load_decoder=False)
 
     reload = 'reload' in sys.argv
+    reload = True
+    print('Forcing reload!')
     if reload:
         print('using FCNcurrent...')
         fcn_model.load_state_dict(torch.load('FCNcurrent'))
@@ -168,7 +170,7 @@ if __name__ == "__main__":
     fcn_model = fcn_model.train()
     params = [p for p in fcn_model.parameters()]
 #    starting_model = copy.deepcopy(fcn_model)
-    for iteration in range(50000):
+    for iteration in range(1):
         optimizer.zero_grad()
         output = fcn_model(indata)
     #       output = torch.sigmoid(output) # needed for use in plain BCELoss, no logits. 
@@ -189,6 +191,7 @@ if __name__ == "__main__":
         count = 0
         while (torch.isnan(loss) and count < 10):
             print('ARGH! Loss is NaN...trying new data...')
+            print('c2:',torch.mean(c2),'lst:',torch.mean(lst),'reg:',regularization_loss)
             indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
             optimizer.zero_grad()
             output = fcn_model(indata)
