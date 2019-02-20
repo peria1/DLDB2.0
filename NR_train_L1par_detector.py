@@ -184,14 +184,17 @@ if __name__ == "__main__":
             lst = lstar(output,y,pw)
             c2 = torch.mean(pixloss + lst)
             
-            for param in fcn_model.parameters():
-                regularization_loss += torch.sum(torch.abs(param))
+                
+            for name, param in fcn_model.named_parameters():
+                if 'bias' not in name:
+                    regularization_loss += torch.sum(torch.abs(param))
             loss = c2 + L1_alpha * regularization_loss
         
         count = 0
         while (torch.isnan(loss) and count < 10):
-            print('ARGH! Loss is NaN...trying new data...')
+            print('ARGH! Loss is NaN...trying new data for iteration',iteration,'...')
             print('c2:',torch.mean(c2),'lst:',torch.mean(lst),'reg:',regularization_loss)
+
             indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
             optimizer.zero_grad()
             output = fcn_model(indata)
@@ -202,8 +205,9 @@ if __name__ == "__main__":
                 lst = lstar(output,y,pw)
                 c2 = torch.mean(pixloss + lst)
                 
-                for param in fcn_model.parameters():
-                    regularization_loss += torch.sum(torch.abs(param))
+                for name, param in fcn_model.named_parameters():
+                    if 'bias' not in name:
+                        regularization_loss += torch.sum(torch.abs(param))
                 loss = c2 + L1_alpha * regularization_loss
                 count+=1
     

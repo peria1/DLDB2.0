@@ -71,11 +71,12 @@ if __name__ == "__main__":
     show_plots = False
     GPU = True
 
-    pth = \
-'/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/' + \
-'DLDBproject/DLDB_20181015_0552'
+#    pth = \
+#'/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/' + \
+#'DLDBproject/DLDB_20181015_0552'
 
-    db = dldb.DLDB(pth)
+ 
+    db = dldb.DLDB()
     
     batch_size, n_class, h, w = 20, 3, 256, 256
 
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 
     early = False
     fcn_model.train()
-    for iteration in range(100):
+    for iteration in range(50000):
         optimizer.zero_grad()
         output = fcn_model(indata)
         if iteration == 0:
