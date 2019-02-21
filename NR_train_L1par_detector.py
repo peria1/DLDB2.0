@@ -105,9 +105,18 @@ def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=Non
     return indata,y
 
 #----------------------
+def reg_loss(model):
+    regularization_loss = torch.tensor(0.).type(torch.float).cuda()
+    for name, param in model.named_parameters():
+        ok = 'pretrained_net' in name and 'bias' not in name
+        if ok:
+            regularization_loss += torch.sum(torch.abs(param))
+    
+    return regularization_loss
 
 if __name__ == "__main__":
     
+    itmax = 50000
     L1_alpha = 1e-4
     
     bd = 41 # boundary_distance This is the typical error expected when a pathologist 
@@ -138,10 +147,12 @@ if __name__ == "__main__":
 
     fcn_model = fcn.load_model(n_class=n_class,fcnname=fcn_name,\
                                freeze_encoder=False, load_decoder=False)
+    
+    for n,p in fcn_model.named_parameters():
+        if 'bn3.weight' in n:
+            bn3 = p
 
     reload = 'reload' in sys.argv
-    reload = True
-    print('Forcing reload!')
     if reload:
         print('using FCNcurrent...')
         fcn_model.load_state_dict(torch.load('FCNcurrent'))
@@ -170,7 +181,7 @@ if __name__ == "__main__":
     fcn_model = fcn_model.train()
     params = [p for p in fcn_model.parameters()]
 #    starting_model = copy.deepcopy(fcn_model)
-    for iteration in range(1):
+    for iteration in range(itmax):
         optimizer.zero_grad()
         output = fcn_model(indata)
     #       output = torch.sigmoid(output) # needed for use in plain BCELoss, no logits. 
@@ -178,16 +189,12 @@ if __name__ == "__main__":
             if GPU:
                 output = output.cuda()
 
-        regularization_loss = 0
         with torch.enable_grad():
             pixloss = criterion(output,y)
             lst = lstar(output,y,pw)
             c2 = torch.mean(pixloss + lst)
             
-                
-            for name, param in fcn_model.named_parameters():
-                if 'bias' not in name:
-                    regularization_loss += torch.sum(torch.abs(param))
+            regularization_loss = reg_loss(fcn_model)                
             loss = c2 + L1_alpha * regularization_loss
         
         count = 0
@@ -199,15 +206,12 @@ if __name__ == "__main__":
             optimizer.zero_grad()
             output = fcn_model(indata)
             
-            regularization_loss = 0
             with torch.enable_grad():
                 pixloss = criterion(output,y)
                 lst = lstar(output,y,pw)
                 c2 = torch.mean(pixloss + lst)
                 
-                for name, param in fcn_model.named_parameters():
-                    if 'bias' not in name:
-                        regularization_loss += torch.sum(torch.abs(param))
+                regularization_loss = reg_loss(fcn_model)                
                 loss = c2 + L1_alpha * regularization_loss
                 count+=1
     
@@ -230,6 +234,8 @@ if __name__ == "__main__":
 #            torch.save(vgg_model.state_dict(),'VGGcurrent')
             print('c2:',torch.mean(c2).item())
             print('L1loss:',regularization_loss.item() * L1_alpha)
+            print('bn3 mean:',torch.mean(bn3))
+            print('\n')
 
             if len(saveloss) <= 20:
                 print("iteration {}, loss {:.3f}".format(iteration, loss.item()))
