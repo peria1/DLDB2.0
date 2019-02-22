@@ -105,12 +105,16 @@ def grab_new_batch(N=None, maskfile = None, augment = False, boundary_kernel=Non
     return indata,y
 
 #----------------------
-def reg_loss(model):
+def reg_loss(model, plist=None):
     regularization_loss = torch.tensor(0.).type(torch.float).cuda()
-    for name, param in model.named_parameters():
-        ok = 'pretrained_net' in name and 'bias' not in name
-        if ok:
-            regularization_loss += torch.sum(torch.abs(param))
+    if plist is None:
+        for name, param in model.named_parameters():
+            ok = 'pretrained_net' in name and 'bias' not in name
+            if ok:
+                regularization_loss += torch.sum(torch.abs(param))
+    else:
+        for p in plist:
+            regularization_loss += torch.sum(torch.abs(p))
     
     return regularization_loss
 
@@ -118,6 +122,10 @@ if __name__ == "__main__":
     
     itmax = 50000
     L1_alpha = 1e-4
+    
+    L1_pnamelist = ['pretrained_net.features.24.weight',\
+                    'pretrained_net.features.26.weight',\
+                    'pretrained_net.features.28.weight']
     
     bd = 41 # boundary_distance This is the typical error expected when a pathologist 
             # draws a boundary, measured in pixels. 
@@ -148,9 +156,12 @@ if __name__ == "__main__":
     fcn_model = fcn.load_model(n_class=n_class,fcnname=fcn_name,\
                                freeze_encoder=False, load_decoder=False)
     
+    plist = []
     for n,p in fcn_model.named_parameters():
         if 'bn3.weight' in n:
             bn3 = p
+        if n in L1_pnamelist:
+            plist.append(p)
 
     reload = 'reload' in sys.argv
     if reload:
@@ -194,7 +205,7 @@ if __name__ == "__main__":
             lst = lstar(output,y,pw)
             c2 = torch.mean(pixloss + lst)
             
-            regularization_loss = reg_loss(fcn_model)                
+            regularization_loss = reg_loss(fcn_model, plist)                
             loss = c2 + L1_alpha * regularization_loss
         
         count = 0
