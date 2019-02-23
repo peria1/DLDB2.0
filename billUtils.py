@@ -258,7 +258,13 @@ def delentropy(im):
     ok = p > 0
     return -np.sum(p[ok] * np.log2(p[ok]))
 
+def crude_curl(x,y):
+    dxdy = np.int16((np.roll(x,-1,axis=0) - np.roll(x,1,axis=0))/2.0)
+    dydx = np.int16((np.roll(y,-1,axis=1) - np.roll(y,1,axis=1))/2.0)
     
+    return (dxdy - dydx)[1:-1,1:-1] 
+
+
 def ecdf(x):
     x = x.flatten()
     x = x[~np.isnan(x)]
