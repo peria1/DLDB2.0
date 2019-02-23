@@ -217,7 +217,10 @@ if __name__ == "__main__":
             indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
             optimizer.zero_grad()
             
+            fcn_model = fcn.load_model(n_class=n_class,fcnname=fcn_name,\
+                                       freeze_encoder=False, load_decoder=False)
             fcn_model.load_state_dict(torch.load('FCNcurrent'))
+            fcn_model = fcn_model.cuda().train()
             output = fcn_model(indata)
             
             with torch.enable_grad():
@@ -225,7 +228,7 @@ if __name__ == "__main__":
                 lst = lstar(output,y,pw)
                 c2 = torch.mean(pixloss + lst)
                 
-                regularization_loss = reg_loss(fcn_model)                
+                regularization_loss = reg_loss(fcn_model,plist)                
                 loss = c2 + L1_alpha * regularization_loss
                 count+=1
     
