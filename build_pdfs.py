@@ -25,6 +25,9 @@ import fcn
 import torch
 import matplotlib.pyplot as plt
 
+from skimage.filters import scharr_h, scharr_v
+import pickle
+
 import copy
 import gc
 
@@ -135,38 +138,47 @@ def accum_pdf_hook(self, input, output):
     global FEATURE_MAPS
 #        
     pred = output.cpu().detach().numpy()
+    prmin = np.min(pred)
+    prmax = np.max(pred)
+    prange = prmax - prmin
     
     nexamp, nfm, ny, nx = pred.shape
     pred = np.transpose(pred, axes=(0,2,3,1))
-    pred = (pred-np.min(pred))/(np.max(pred)-np.min(pred))*128
-    edges = np.arange(-255,255)
+#    pred = (pred- prmin/prange*128
+    pred = 2*(pred- prmin)/prange - 1
     
-    i16 = np.int16(pred)
-    dx = np.int16((np.roll(i16,-1,axis=2) - np.roll(i16,1,axis=2))/2.0)
-    dy = np.int16((np.roll(i16,-1,axis=1) - np.roll(i16,1,axis=1))/2.0)
-#    print(dx.shape)
-#   The gradient shapes are (nexamp, ny, nx, nfm)
+    dx = np.zeros_like(pred)
+    dy = np.zeros_like(pred)
+    
+    for i in range(nexamp):
+        for j in range(nfm):
+            dx[i,:,:,j] = scharr_h(pred[i,:,:,j])
+            dy[i,:,:,j] = scharr_v(pred[i,:,:,j])
+    
+#    i16 = np.int16(pred)
+#    dx = np.int16((np.roll(i16,-1,axis=2) - np.roll(i16,1,axis=2))/2.0)
+#    dy = np.int16((np.roll(i16,-1,axis=1) - np.roll(i16,1,axis=1))/2.0)
 
-    dx = dx[:,1:-1,1:-1,:]
-    dy = dy[:,1:-1,1:-1,:]
+
+#   The gradient shapes are (nexamp, ny, nx, nfm)
+    magnify = 10
+    dx = dx[:,1:-1,1:-1,:]*magnify
+    dy = dy[:,1:-1,1:-1,:]*magnify
 #    Oops now it's (nexamp, ny-2,nx-2,nfm)
-#    H = np.zeros((nexamp,nfm,509,509))
+    print(np.min(dx), np.max(dx))
+    print(np.min(dy), np.max(dy))
+    
     if isinstance(FEATURE_MAPS, type(None)):
         FEATURE_MAPS = np.zeros((nexamp,nfm,509,509),dtype=np.uint16)
         print('created zeros for FEATURE_MAPS...')
 
+    edges = np.arange(-255,255)
     for i in range(nexamp):
         for j in range(nfm):
             FEATURE_MAPS[i,j,:,:], xedges, yedges = \
                         np.histogram2d(dx[i,:,:,j].flatten(),\
                                        dy[i,:,:,j].flatten(),\
                                        bins=(edges, edges))
-
-#    FEATURE_MAPS = H
-    
-#
-        
-    print(id(FEATURE_MAPS))
     
     return
 
@@ -181,7 +193,7 @@ if __name__ == '__main__':
     pick = 29 # this yields pretrained_net 28
     print('Examining feature maps of',mnames[pick])
 
-    ntry = 100
+    ntry = 1
 #    cpred = np.zeros(batch_size*ntry)
 #    cpath = np.zeros_like(cpred)
 #    Make bins for cpath and cpred. One bin is for exactly zero, then 10 more from 
@@ -222,6 +234,7 @@ if __name__ == '__main__':
             mmaps[mbins[i],:,:,:] += FEATURE_MAPS[i,:,:,:]
 
 
+    print('done with histogram...')
     nbins, nfm, ny, nx = pmaps.shape
 
     def entropy(C):
@@ -236,6 +249,7 @@ if __name__ == '__main__':
     ppdf = np.zeros((nbins, nfm))
     mpdf = np.zeros((nbins, nfm))
     
+    print('computing entropy...')
     ent = np.zeros((nbins,nfm))
     for i in range(nbins):
         for j in range(nfm):
@@ -243,21 +257,27 @@ if __name__ == '__main__':
             mentropy[i,j] = entropy(mmaps[i,j,:,:])
 #            ppdf[i,j] = pmaps[i,j,:,:]/np.sum(pmaps[i,j,:,:])
 
+#    print('normalizing...')
+#    ppdf = pmaps / np.sum(pmaps,axis=(2,3),keepdims=True)
+#    mpdf = mmaps / np.sum(mmaps,axis=(2,3),keepdims=True)
 
-    ppdf = pmaps / np.sum(pmaps,axis=(2,3),keepdims=True)
-    mpdf = mmaps / np.sum(mmaps,axis=(2,3),keepdims=True)
 
-
-    def KLdiv(p,q):
-        ok = np.logical_and(p > 0, q > 0);
-        return np.sum(p[ok]*np.log2(p[ok]/q[ok]))
-    
-    kld = np.zeros((nbins, nfm))
-    for i in range(nbins):
-        for j in range(nfm):
-            kld[i,j] = KLdiv(mpdf[i,j,:,:],mpdf[0,j,:,:])
+#    def KLdiv(p,q):
+#        ok = np.logical_and(p > 0, q > 0);
+#        return np.sum(p[ok]*np.log2(p[ok]/q[ok]))
+#    
+#    kld = np.zeros((nbins, nfm))
+#    for i in range(nbins):
+#        for j in range(nfm):
+#            kld[i,j] = KLdiv(mpdf[i,j,:,:],mpdf[0,j,:,:])
             
+#    pdf_name = 'pdfs_'+bu.date_for_filename()
+#    with open(pdf_name,'wb') as f:
+#        f.write(pickle.dumps({'pathologist':np.float16(ppdf), 'model': np.float16(mpdf)}))
 
+#    with open(pdf_name,'rb') as f:
+#        pdf_dict = pickle.load(f)
+        
 #        fmaps[(i*batch_size):(i*batch_size + batch_size),:] = FEATURE_MAPS
         
 #    ii = np.argsort(cpred)
