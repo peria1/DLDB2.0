@@ -136,8 +136,6 @@ def load_model(GPU=True,n_class=1,load_encoder=False,load_decoder=True,\
     # Get the structure of VGG. I don't want to use their pre-trained model (ImageNet?)
     vgg_model = VGGNet(pretrained = False, requires_grad=requires_grad, GPU = GPU)
     
-    # Get the structure of FCN8 decoder. 
-    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class) 
     
 #    if vggname is None:
 ##        vggname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/vgg20181017_0642'
@@ -158,10 +156,20 @@ def load_model(GPU=True,n_class=1,load_encoder=False,load_decoder=True,\
                        # any state that is already in the encoder.
         if fcnname is None:
             fcnname = bu.uichoosefile(title='Choose FCN file...')
-        print('Loading decoder state from '+bu.just_filename(bu,fcnname)+'...')
-        fcn_model.load_state_dict(torch.load(fcnname))
+            
+        fcn_dict = torch.load(fcnname)
+        nn_class = fcn_dict['classifier.weight'].size()[0]
+        if nn_class != n_class:
+            print('Fixing n_class...',n_class,'-->',nn_class)
+            n_class = nn_class
     else:
         print('Not loading decoder state...')
+
+    # Get the structure of FCN8 decoder. 
+    fcn_model = FCN8s(pretrained_net=vgg_model, n_class=n_class) 
+    if load_decoder:
+        print('Loading decoder state from '+bu.just_filename(bu,fcnname)+'...')
+        fcn_model.load_state_dict(fcn_dict)
 
     if load_encoder:   # if True, this will copy the encoder from vgg_model into fcn_model
         new_dict = copy.deepcopy(fcn_model.state_dict())
