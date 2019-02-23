@@ -250,7 +250,7 @@ if __name__ == '__main__':
                      if len(module._modules) == 0]
     mnames = [name for name, module in net.named_modules()\
                      if len(module._modules) == 0]
-    pick = 29 # this yields pretrained_net 28
+    pick = 23 # 29 yields pretrained_net 28
     print('Examining feature maps of',mnames[pick])
 
     ntry = 10
@@ -263,8 +263,8 @@ if __name__ == '__main__':
         print('Processing batch',i+1,'of',ntry)
         
         indata,y = grab_new_batch()
-#        hook = modules[pick].register_forward_hook(lit_up_hook)
-        hook = modules[pick].register_forward_hook(delentropy_hook)
+        hook = modules[pick].register_forward_hook(lit_up_hook)
+#        hook = modules[pick].register_forward_hook(delentropy_hook)
 #        hook = modules[pick].register_forward_hook(show_ranges_hook)
         out = torch.sigmoid(net(indata))
         hook.remove()
