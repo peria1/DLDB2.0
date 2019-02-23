@@ -259,8 +259,10 @@ if __name__ == "__main__":
 
 #--------------------------TEST    
 
+#machine_dict = {26403106419067 : {'name': 'muddlehead', 'low': 1591, 'high' : 2748}, \
+#                30139154252066 : {'name': 'bubba', 'low': 2495, 'high' : 3652}}
 machine_dict = {26403106419067 : {'name': 'muddlehead', 'low': 1591, 'high' : 2748}, \
-                30139154252066 : {'name': 'bubba', 'low': 2495, 'high' : 3652}}
+                129683601929048 : {'name': 'bubba', 'low': 2495, 'high' : 3652}}
 
 
 entry = machine_dict[uuid.getnode()]
