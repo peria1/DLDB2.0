@@ -210,11 +210,14 @@ if __name__ == "__main__":
         
         count = 0
         while (torch.isnan(loss) and count < 10):
-            print('ARGH! Loss is NaN...trying new data for iteration',iteration,'...')
+            print('ARGH! Loss is NaN... reloading model state and trying new data for iteration',iteration,'...')
             print('c2:',torch.mean(c2),'lst:',torch.mean(lst),'reg:',regularization_loss)
+            print('bn3 mean:',torch.mean(bn3))
 
             indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
             optimizer.zero_grad()
+            
+            fcn_model.load_state_dict(torch.load('FCNcurrent'))
             output = fcn_model(indata)
             
             with torch.enable_grad():
