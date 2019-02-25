@@ -253,6 +253,13 @@ if __name__ == "__main__":
         if some_nans:
             print('Going back to previous NaN-free model...')
             fcn_model = copy.deepcopy(fcn_no_nans)
+            print('Checking again for NaNs...')
+            for n, p in fcn_model.named_parameters():
+                nnan = torch.sum(torch.isnan(p))
+                if nnan > 0:
+                    some_nans = True
+                    print(n,'has',nnan,'NaNs...')
+            print('Were there NaNs?')
         else:
             fcn_no_nans = copy.deepcopy(fcn_model)
         
