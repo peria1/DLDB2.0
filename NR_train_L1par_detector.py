@@ -192,6 +192,7 @@ if __name__ == "__main__":
     fcn_model = fcn_model.train()
     params = [p for p in fcn_model.parameters()]
     fcn_no_nans = copy.deepcopy(fcn_model)
+    print('Not doing the boundary exclusion...')
     for iteration in range(itmax):
         optimizer.zero_grad()
         output = fcn_model(indata)
@@ -204,41 +205,41 @@ if __name__ == "__main__":
 
         with torch.enable_grad():
             pixloss = criterion(output,y)
-            lst = lstar(output,y,pw)
-            c2 = torch.mean(pixloss + lst)
-            
+#            lst = lstar(output,y,pw)
+#            c2 = torch.mean(pixloss + lst)
+            c2 = torch.mean(pixloss)
             regularization_loss = reg_loss(fcn_model, plist)                
             loss = c2 + L1_alpha * regularization_loss
         
-        count = 0
-        while (torch.isnan(loss) and count < 10):
-            print('ARGH! Loss is NaN... reloading model state and trying new data for iteration',iteration,'...')
-            print('c2:',torch.mean(c2),'lst:',torch.mean(lst),'reg:',regularization_loss)
-            print('bn3 mean:',torch.mean(bn3))
-
-            indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
-            optimizer.zero_grad()
-            
-            fcn_model = fcn.load_model(n_class=n_class,fcnname=fcn_name,\
-                                       freeze_encoder=False, load_decoder=False)
-            fcn_model.load_state_dict(torch.load('FCNcurrent'))
-            fcn_model = fcn_model.cuda().train()
-            output = fcn_model(indata)
-            
-            with torch.enable_grad():
-                pixloss = criterion(output,y)
-                lst = lstar(output,y,pw)
-                c2 = torch.mean(pixloss + lst)
-                
-                regularization_loss = reg_loss(fcn_model,plist)                
-                loss = c2 + L1_alpha * regularization_loss
-                count+=1
-    
-    
-        if count >= 10:
-            print('More than 10 batches yielded NaNs, bailing...')
-            torch.save(fcn_model.state_dict(),'FCNbail' + db.date_for_filename())
-            break
+#        count = 0
+#        while (torch.isnan(loss) and count < 10):
+#            print('ARGH! Loss is NaN... reloading model state and trying new data for iteration',iteration,'...')
+#            print('c2:',torch.mean(c2),'lst:',torch.mean(lst),'reg:',regularization_loss)
+#            print('bn3 mean:',torch.mean(bn3))
+#
+#            indata,y = grab_new_batch(augment=True,boundary_kernel=ck)
+#            optimizer.zero_grad()
+#            
+#            fcn_model = fcn.load_model(n_class=n_class,fcnname=fcn_name,\
+#                                       freeze_encoder=False, load_decoder=False)
+#            fcn_model.load_state_dict(torch.load('FCNcurrent'))
+#            fcn_model = fcn_model.cuda().train()
+#            output = fcn_model(indata)
+#            
+#            with torch.enable_grad():
+#                pixloss = criterion(output,y)
+#                lst = lstar(output,y,pw)
+#                c2 = torch.mean(pixloss + lst)
+#                
+#                regularization_loss = reg_loss(fcn_model,plist)                
+#                loss = c2 + L1_alpha * regularization_loss
+#                count+=1
+#    
+#    
+#        if count >= 10:
+#            print('More than 10 batches yielded NaNs, bailing...')
+#            torch.save(fcn_model.state_dict(),'FCNbail' + db.date_for_filename())
+#            break
 #        
         loss.backward()
         saveloss.append(loss.item())
@@ -258,7 +259,7 @@ if __name__ == "__main__":
                 nnan = torch.sum(torch.isnan(p))
                 if nnan > 0:
                     some_nans = True
-                    print(n,'has',nnan,'NaNs...')
+                    print(n,'has',nnan,'NaNs...THIS IS COMPLETE NONSENSE')
             print('Were there NaNs?')
         else:
             fcn_no_nans = copy.deepcopy(fcn_model)
