@@ -191,7 +191,7 @@ if __name__ == "__main__":
     
     fcn_model = fcn_model.train()
     params = [p for p in fcn_model.parameters()]
-#    starting_model = copy.deepcopy(fcn_model)
+    fcn_no_nans = copy.deepcopy(fcn_model)
     for iteration in range(itmax):
         optimizer.zero_grad()
         output = fcn_model(indata)
@@ -242,11 +242,19 @@ if __name__ == "__main__":
 #        
         loss.backward()
         saveloss.append(loss.item())
+        some_nans = False
         optimizer.step()
         for n, p in fcn_model.named_parameters():
             nnan = torch.sum(torch.isnan(p))
             if nnan > 0:
+                some_nans = True
                 print(n,'has',nnan,'NaNs...')
+        
+        if some_nans:
+            print('Going back to previous NaN-free model...')
+            fcn_model = copy.deepcopy(fcn_no_nans)
+        else:
+            fcn_no_nans = copy.deepcopy(fcn_model)
         
         
         if c2 < 0.5 and early: 
