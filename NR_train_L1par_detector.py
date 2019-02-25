@@ -130,9 +130,9 @@ if __name__ == "__main__":
     bd = 41 # boundary_distance This is the typical error expected when a pathologist 
             # draws a boundary, measured in pixels. 
             
-    ck = torch.reshape(torch.tensor(circle_kernel(bd)).type(torch.float),(1,1,bd,bd)) 
-#    ck = None
-#    print('turned off circle kernel boundary ignorer...')
+#    ck = torch.reshape(torch.tensor(circle_kernel(bd)).type(torch.float),(1,1,bd,bd)) 
+    ck = None
+    print('turned off circle kernel boundary ignorer...')
     
     show_plots = False
     GPU = True
@@ -261,7 +261,7 @@ if __name__ == "__main__":
                     some_nans = True
                     print(n,'has',nnan,'NaNs...THIS IS COMPLETE NONSENSE')
             print('Were there NaNs?')
-        else:
+        else:  # the optimizer took a step without introducing NaNs, preserve that.
             fcn_no_nans = copy.deepcopy(fcn_model)
         
         
