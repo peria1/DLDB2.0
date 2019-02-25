@@ -195,6 +195,8 @@ if __name__ == "__main__":
     for iteration in range(itmax):
         optimizer.zero_grad()
         output = fcn_model(indata)
+        if torch.sum(torch.isnan(output)) > 0:
+            print('output has NaNs...')
     #       output = torch.sigmoid(output) # needed for use in plain BCELoss, no logits. 
         if iteration == 0:
             if GPU:
@@ -241,6 +243,11 @@ if __name__ == "__main__":
         loss.backward()
         saveloss.append(loss.item())
         optimizer.step()
+        for n, p in fcn_model.named_parameters():
+            nnan = torch.sum(torch.isnan(p))
+            if nnan > 0:
+                print(n,'has',nnan,'NaNs...')
+        
         
         if c2 < 0.5 and early: 
             early = False           
