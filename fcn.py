@@ -129,7 +129,7 @@ def make_layers(cfg, batch_norm=False):
 
 def load_model(GPU=True,n_class=1,load_encoder=False,load_decoder=True,\
                vggname=None, fcnname=None, \
-               freeze_encoder = False): #, drop_layer=True):
+               freeze_encoder = False, load_encoder_fcn=False): #, drop_layer=True):
     
     requires_grad = not freeze_encoder
 
@@ -144,9 +144,7 @@ def load_model(GPU=True,n_class=1,load_encoder=False,load_decoder=True,\
 ##        fcnname = '/media/bill/Windows1/Users/peria/Desktop/work/Brent Lab/Boucheron CNNs/DLDBproject/FCN20181017_0642'
 #        fcnname = bu.uichoosefile(title='Choose FCN file...')
         
-    if load_encoder:
-        if vggname is None:
-            vggname = bu.uichoosefile(title='Choose VGG file...')
+    if load_encoder and vggname is not None:
         print('Loading encoder state from '+bu.just_filename(bu,vggname)+'...')
         vgg_model.load_state_dict(torch.load(vggname))
     else:
@@ -179,6 +177,15 @@ def load_model(GPU=True,n_class=1,load_encoder=False,load_decoder=True,\
         
         fcn_model.load_state_dict(new_dict)        
                
+    if load_encoder_fcn:
+        if fcnname is None:
+            fcnname = bu.uichoosefile(title='Choose FCN file...')
+        fcn_dict = torch.load(fcnname)
+        
+        print('Copying encoder from',fcnname,'...')
+        for k in fcn_model.state_dict().keys():
+            if 'pretrained' in k:
+                fcn_model.state_dict()[k] = copy.deepcopy(fcn_dict[k])
         
         
     return fcn_model
