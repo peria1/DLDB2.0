@@ -21,7 +21,7 @@ from dldb import dlTile
 
 import copy
 import traceback as tb
-
+import os
 
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
@@ -29,7 +29,7 @@ def check_mainloop():
     print('Checking for instances of mainloop...')
     stack = tb.extract_stack()
     for (file_name, lineno, function_name, text) in stack:
-        if function_name is 'mainloop':
+        if function_name == 'mainloop':
             report = ['mainloop instance found:',file_name, lineno, function_name, text]
             report = [str(item) for item in report]
             print('\n'.join(report))
@@ -48,7 +48,7 @@ class Model():
         import fcn
         
         self.normalization = 'lump3'
-        if self.normalization is 'lump3':
+        if self.normalization == 'lump3':
             print('Using incorrect 3-color lumped normalization...')
         
         self.batch_size = batch_size
@@ -59,9 +59,10 @@ class Model():
 
         if dldb_path is None:
 #            dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
-            dldb_path = '/media/bill/Windows1/Users/'+\
-            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-            'DLDBproject/DLDB_20181015_0552'
+            # dldb_path = '/media/bill/Windows1/Users/'+\
+            # 'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+            # 'DLDBproject/DLDB_20181015_0552'
+            dldb_path = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\DLDB_20180827_0753')
 
         if fcn_name is None:
 #
@@ -76,9 +77,11 @@ class Model():
 #   the decoder again. This did not change the "zeroing feature maps has hardly
 #   any effect" mystery.          
 #            
-            fcn_name = '/media/bill/Windows1/Users/' + \
-                              'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-                              'DLDBproject/preFCN20181128_1130'
+            # fcn_name = '/media/bill/Windows1/Users/' + \
+            #                   'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+            #                   'DLDBproject/preFCN20181128_1130'
+                              
+            fcn_name = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\preFCN20181128_1130')
 #
 #   The following fcn is the one I made after discovering that loading the state_dict from an FCN file
 #   actually also overwrites the VGG coefficients. The fcn.py code still behaves that way, but now
@@ -138,8 +141,10 @@ class Model():
         else:
             Nlist = self.current_tiles
 
+        print('In get_new_data(), maskfile is', maskfile)
         self.input, self.masks = self.grab_new_batch(N=Nlist,\
                                          maskfile=maskfile)
+        print('mask device:', self.masks.device)
         if not reload:
             self.icurrent = 0
         
@@ -238,6 +243,7 @@ class Model():
     def get_data_for_display(self, output = False):
         if output:
             stuff = self.net(self.input)
+            print('called self.net...')
         else:
             stuff = self.input
         
@@ -252,6 +258,7 @@ class Model():
     
     def get_mask_for_display(self):
         m = self.masks[self.icurrent,:,:]
+        print('m is type',type(m))
         return m
     
     def get_feature_map_for_display(self):
@@ -277,12 +284,12 @@ class Model():
                        boundary_kernel=None):
 
 
-#        print('Fixed N!')
-#        N = [ 968,  521 , 419 , 737 ,1140, 1240,  677, 1178,  694,  255, \
-#             281,  451, 1182,  527,  203,  156,  893,  398,  975, 1066]
+        print('Fixed N!')
+        N = [ 968,  521 , 419 , 737 ,1140, 1240,  677, 1178,  694,  255, \
+            281,  451, 1182,  527,  203,  156,  893,  398,  975, 1066]
         
-        if N == None:
-            N=list(np.random.randint(0,size=self.batch_size,high=1260))    
+        # if N == None:
+        #     N=list(np.random.randint(0,size=self.batch_size,high=1260))    
 
         indata, y = self.db.feed_pytorch(N=N, maskfile=maskfile,\
                                         normalization=self.normalization)
@@ -553,17 +560,17 @@ class View(Tk.Frame):
         
     def plot(self):
         print('waiting 1 s, is window still there?')
-        self.parent.after(1000, self.bullshit)
+        self.parent.after(1000, self.no_op)
         self.update_plots()
         
-    def bullshit(self):
-        print('called bullshit...')
+    def no_op(self):
+        print('called no_op...')
             
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
         self.ax1.imshow(self.model.get_data_for_display())
         self.ax2.imshow(self.model.get_data_for_display(output=True))
-        self.ax3.imshow(self.model.get_mask_for_display())
+        self.ax3.imshow(self.model.get_mask_for_display().detach().cpu().numpy())
         img_fm = self.model.get_feature_map_for_display()
         self.ax4.imshow(img_fm)
         self.ax4.set_title(self.v.get() + ': largest feature is ' +str(self.model.largest))
@@ -600,17 +607,6 @@ class View(Tk.Frame):
             pass
         
                 
-
-#        print('trying to quit...',self.root.destroy)
-#        print('Calling bullshit and waiting 10 s, is window still there?')
-#        self.root.after(10, self.bullshit)
-#        self.root.after(10000, lambda *_ : self.root.destroy())
-##        print('About to destroy...')        
-#        self.root.destroy()
-#        print('Destroyed!')
-
-###
-###
 
     
 class Controller(Tk.Frame):
