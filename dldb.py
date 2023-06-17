@@ -10,7 +10,19 @@ Created on Wed Apr 25 05:52:46 2018
 
 @author: Bill Peria
 """
-import openslide
+
+
+# The path can also be read from a config file, etc.
+OPENSLIDE_PATH = 'C:\\Users\\peria\\miniconda3\\envs\\renewDLDB\\Lib\\openslide-win64-20230414\\bin'
+
+import os
+if hasattr(os, 'add_dll_directory'):
+    # Python >= 3.8 on Windows
+    with os.add_dll_directory(OPENSLIDE_PATH):
+        import openslide
+else:
+    import openslide
+
 import numpy as np
 #import scipy as sp
 import skimage.transform
@@ -263,6 +275,9 @@ class DLDB():
         envr = lmdb.open(dbdir)
         self.env = envr
         self.input_directory = self.lmdbget('input directory')
+        self.input_directory = os.getcwd()
+        
+        print('Using',self.input_directory, 'as input directory.')
 
 #        if not caffe_name == None:
 #            print(caffe_name)
@@ -587,7 +602,8 @@ class DLDB():
         foundtiles = []
         with envr.begin(write=False) as txn:
             TI = self.lmdbget('tile index')
-
+            print(TI)
+            
         for key, value in TI.items():
             nlist = [n for n in tilenum if n >= value[0] if n < value[1]]
             if len(nlist) > 0:
@@ -608,6 +624,8 @@ class DLDB():
             keypick = str(npick).encode()
             TI = self.lmdbget('tile index')
         
+        print(TI)
+        print('keypick is', keypick)
         for key, value in TI.items():
             if npick >= value[0] and npick < value[1]:
                 with lmdb.open(key).begin() as txn:
@@ -895,3 +913,6 @@ def in_poly(P,V):
 #  writer.save()
 # Then I need to learn to append a column to a dataframe. 
 #------------------
+
+
+
