@@ -21,6 +21,8 @@ from dldb import dlTile
 
 import copy
 import traceback as tb
+import yaml
+
 
 
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
@@ -47,6 +49,10 @@ class Model():
         #
         import fcn
         
+        
+        with open("paths.yml", "r") as f:
+            paths = yaml.load(f, Loader=yaml.FullLoader)
+
         self.normalization = 'lump3'
         if self.normalization == 'lump3':
             print('Using incorrect 3-color lumped normalization...')
@@ -59,7 +65,8 @@ class Model():
 
         if dldb_path is None:
 #            dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
-            dldb_path = 'DLDB_20180827_0753'
+            # dldb_path = 'DLDB_20180827_0753'
+            dldb_path = paths['dldb_path']
         if fcn_name is None:
 #
 #  This fcn is the one that I trained with a dropout layer in place. I then 
@@ -76,7 +83,8 @@ class Model():
             # fcn_name = '/media/bill/Windows1/Users/' + \
             #                   'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
             #                   'DLDBproject/preFCN20181128_1130'
-            fcn_name = '/media/bill/System/Users/peria/Desktop/body weight exercises/renewDLDB/Boucheron CNNs/DLDBproject/FCN20190225_2236'
+            # fcn_name = '/media/bill/System/Users/peria/Desktop/body weight exercises/renewDLDB/Boucheron CNNs/DLDBproject/FCN20190225_2236'
+            fcn_name = paths['fcn_name']
             # fcn_name = './FCN20181205_2144'
     # Here is what TandemViewer uses as of 5-July-2023
     # vggname = FCNdir + 'vgg20181205_2144'  # cancer detector with per color normalization
