@@ -12,16 +12,6 @@ Created on Wed Apr 25 05:52:46 2018
 """
 
 
-# The path can also be read from a config file, etc.
-OPENSLIDE_PATH = 'C:\\Users\\peria\\miniconda3\\envs\\renewDLDB\\Lib\\openslide-win64-20230414\\bin'
-
-import os
-if hasattr(os, 'add_dll_directory'):
-    # Python >= 3.8 on Windows
-    with os.add_dll_directory(OPENSLIDE_PATH):
-        import openslide
-else:
-    import openslide
 
 import numpy as np
 #import scipy as sp
@@ -41,6 +31,9 @@ import tkinter as tk
 #import gc
 import torch
 from torch.utils.data import Dataset, DataLoader
+
+from config_openslide import import_openslide
+openslide = import_openslide()
 
 openslide.Image.MAX_IMAGE_PIXELS = None # prevents DecompressionBomb Error
 
@@ -112,7 +105,7 @@ class DLDB():
                 return None
                     
         if build:
-            map_size = 1e12 # does this reserve a terabyte of disk? 
+            map_size = 1e9 # does this reserve a terabyte of disk? 
            
             if input_directory==None:
                 print('Be sure to double-click on your chosen directory, and only click ok once you are inside it...')
@@ -274,8 +267,9 @@ class DLDB():
         global envr
         envr = lmdb.open(dbdir)
         self.env = envr
-        self.input_directory = self.lmdbget('input directory')
-        self.input_directory = os.getcwd()
+        # self.input_directory = self.lmdbget('input directory')
+        # self.input_directory = os.getcwd()
+        self.input_directory = dbdir
         
         print('Using',self.input_directory, 'as input directory.')
 

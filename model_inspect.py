@@ -62,7 +62,7 @@ class Model():
             # dldb_path = '/media/bill/Windows1/Users/'+\
             # 'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
             # 'DLDBproject/DLDB_20181015_0552'
-            dldb_path = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\DLDB_20180827_0753')
+            dldb_path = os.path.normpath(r'DLDB_20180827_0753')
 
         if fcn_name is None:
 #
@@ -81,7 +81,10 @@ class Model():
             #                   'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
             #                   'DLDBproject/preFCN20181128_1130'
                               
-            fcn_name = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\preFCN20181128_1130')
+            # fcn_name = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\preFCN20181128_1130')
+            fcn_name = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\FCN20181130_0612')
+
+
 #
 #   The following fcn is the one I made after discovering that loading the state_dict from an FCN file
 #   actually also overwrites the VGG coefficients. The fcn.py code still behaves that way, but now
@@ -248,6 +251,7 @@ class Model():
             stuff = self.input
         
         data = stuff.cpu().detach().numpy()
+        print('output shape is', data.shape)
         if len(data.shape) < 4:
             data = np.expand_dims(data,0)
         
@@ -569,7 +573,7 @@ class View(Tk.Frame):
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
         self.ax1.imshow(self.model.get_data_for_display())
-        self.ax2.imshow(self.model.get_data_for_display(output=True))
+        self.ax2.imshow(self.model.get_data_for_display(output=True)[:,:,self.model.icurrent])
         self.ax3.imshow(self.model.get_mask_for_display().detach().cpu().numpy())
         img_fm = self.model.get_feature_map_for_display()
         self.ax4.imshow(img_fm)
