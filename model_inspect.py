@@ -29,7 +29,7 @@ def check_mainloop():
     print('Checking for instances of mainloop...')
     stack = tb.extract_stack()
     for (file_name, lineno, function_name, text) in stack:
-        if function_name is 'mainloop':
+        if function_name == 'mainloop':
             report = ['mainloop instance found:',file_name, lineno, function_name, text]
             report = [str(item) for item in report]
             print('\n'.join(report))
@@ -48,7 +48,7 @@ class Model():
         import fcn
         
         self.normalization = 'lump3'
-        if self.normalization is 'lump3':
+        if self.normalization == 'lump3':
             print('Using incorrect 3-color lumped normalization...')
         
         self.batch_size = batch_size
@@ -59,10 +59,7 @@ class Model():
 
         if dldb_path is None:
 #            dldb_path = bu.uichoosedir(title='Choose DLDB folder...')
-            dldb_path = '/media/bill/Windows1/Users/'+\
-            'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-            'DLDBproject/DLDB_20181015_0552'
-
+            dldb_path = 'DLDB_20180827_0753'
         if fcn_name is None:
 #
 #  This fcn is the one that I trained with a dropout layer in place. I then 
@@ -76,9 +73,16 @@ class Model():
 #   the decoder again. This did not change the "zeroing feature maps has hardly
 #   any effect" mystery.          
 #            
-            fcn_name = '/media/bill/Windows1/Users/' + \
-                              'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
-                              'DLDBproject/preFCN20181128_1130'
+            # fcn_name = '/media/bill/Windows1/Users/' + \
+            #                   'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
+            #                   'DLDBproject/preFCN20181128_1130'
+            fcn_name = '/media/bill/System/Users/peria/Desktop/body weight exercises/renewDLDB/Boucheron CNNs/DLDBproject/FCN20190225_2236'
+            # fcn_name = './FCN20181205_2144'
+    # Here is what TandemViewer uses as of 5-July-2023
+    # vggname = FCNdir + 'vgg20181205_2144'  # cancer detector with per color normalization
+    # fcnname = FCNdir + 'FCN20181205_2144'
+
+
 #
 #   The following fcn is the one I made after discovering that loading the state_dict from an FCN file
 #   actually also overwrites the VGG coefficients. The fcn.py code still behaves that way, but now
@@ -127,7 +131,7 @@ class Model():
         self.viewers.append(v)
         
     def get_new_data(self, reload=None):
-        
+        print('self.maskfile is', self.maskfile)
         if not self.maskfile:
             maskfile = 'test3_cancer.tif'
         
@@ -238,16 +242,20 @@ class Model():
     def get_data_for_display(self, output = False):
         if output:
             stuff = self.net(self.input)
+            data = stuff.cpu().detach().numpy()
+            print(data.shape)
+            data = data[self.icurrent, :, :]
         else:
             stuff = self.input
         
-        data = stuff.cpu().detach().numpy()
-        if len(data.shape) < 4:
-            data = np.expand_dims(data,0)
-        
-        dmin = np.min(data); dmax = np.max(data)
-        data = (data - dmin)/(dmax-dmin)
-        data = np.transpose(data[self.icurrent,:,:,:],axes=[1,2,0])
+            data = stuff.cpu().detach().numpy()
+            if len(data.shape) < 4:
+                data = np.expand_dims(data,0)
+            
+            dmin = np.min(data); dmax = np.max(data)
+            data = (data - dmin)/(dmax-dmin)
+            data = np.transpose(data[self.icurrent,:,:,:],axes=[1,2,0])
+            
         return data
     
     def get_mask_for_display(self):
@@ -553,17 +561,20 @@ class View(Tk.Frame):
         
     def plot(self):
         print('waiting 1 s, is window still there?')
-        self.parent.after(1000, self.bullshit)
+        self.parent.after(1000, self.no_op())
         self.update_plots()
         
-    def bullshit(self):
-        print('called bullshit...')
+    def no_op(self):
+        print('called no_op...')
             
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
         self.ax1.imshow(self.model.get_data_for_display())
-        self.ax2.imshow(self.model.get_data_for_display(output=True))
-        self.ax3.imshow(self.model.get_mask_for_display())
+        self.ax2.imshow(self.model.get_data_for_display(output=True) > 0.75)
+        self.ax2.set_title('model')
+        self.ax3.imshow(self.model.get_mask_for_display().cpu())
+        self.ax3.set_title('pathologist'
+                           )
         img_fm = self.model.get_feature_map_for_display()
         self.ax4.imshow(img_fm)
         self.ax4.set_title(self.v.get() + ': largest feature is ' +str(self.model.largest))
@@ -602,8 +613,8 @@ class View(Tk.Frame):
                 
 
 #        print('trying to quit...',self.root.destroy)
-#        print('Calling bullshit and waiting 10 s, is window still there?')
-#        self.root.after(10, self.bullshit)
+#        print('Calling no_op and waiting 10 s, is window still there?')
+#        self.root.after(10, self.no_op)
 #        self.root.after(10000, lambda *_ : self.root.destroy())
 ##        print('About to destroy...')        
 #        self.root.destroy()
