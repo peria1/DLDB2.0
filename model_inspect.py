@@ -22,6 +22,8 @@ from dldb import dlTile
 import copy
 import traceback as tb
 import os
+import yaml
+
 
 FEATURE_MAPS = 'nothing to see here yet'  # a global to hold maps obtained via hook functions. 
 
@@ -47,6 +49,10 @@ class Model():
         #
         import fcn
         
+        
+        with open("paths.yml", "r") as f:
+            paths = yaml.load(f, Loader=yaml.FullLoader)
+
         self.normalization = 'lump3'
         if self.normalization == 'lump3':
             print('Using incorrect 3-color lumped normalization...')
@@ -62,7 +68,9 @@ class Model():
             # dldb_path = '/media/bill/Windows1/Users/'+\
             # 'peria/Desktop/work/Brent Lab/Boucheron CNNs/'+\
             # 'DLDBproject/DLDB_20181015_0552'
-            dldb_path = os.path.normpath(r'DLDB_20180827_0753')
+            # dldb_path = os.path.normpath(r'DLDB_20180827_0753')
+
+            dldb_path = paths['dldb_path']
 
         if fcn_name is None:
 #
@@ -82,7 +90,13 @@ class Model():
             #                   'DLDBproject/preFCN20181128_1130'
                               
             # fcn_name = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\preFCN20181128_1130')
-            fcn_name = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\FCN20181130_0612')
+            # fcn_name = os.path.normpath(r'C:\Users\peria\Desktop\body weight exercises\renewDLDB\Boucheron CNNs\DLDBproject\FCN20181130_0612')
+            # fcn_name = '/media/bill/System/Users/peria/Desktop/body weight exercises/renewDLDB/Boucheron CNNs/DLDBproject/FCN20190225_2236'
+            fcn_name = paths['fcn_name']
+            # fcn_name = './FCN20181205_2144'
+    # Here is what TandemViewer uses as of 5-July-2023
+    # vggname = FCNdir + 'vgg20181205_2144'  # cancer detector with per color normalization
+    # fcnname = FCNdir + 'FCN20181205_2144'
 
 
 #
@@ -133,7 +147,7 @@ class Model():
         self.viewers.append(v)
         
     def get_new_data(self, reload=None):
-        
+        print('self.maskfile is', self.maskfile)
         if not self.maskfile:
             maskfile = 'test3_cancer.tif'
         
@@ -246,18 +260,20 @@ class Model():
     def get_data_for_display(self, output = False):
         if output:
             stuff = self.net(self.input)
-            print('called self.net...')
+            data = stuff.cpu().detach().numpy()
+            print(data.shape)
+            data = data[self.icurrent, :, :]
         else:
             stuff = self.input
         
-        data = stuff.cpu().detach().numpy()
-        print('output shape is', data.shape)
-        if len(data.shape) < 4:
-            data = np.expand_dims(data,0)
-        
-        dmin = np.min(data); dmax = np.max(data)
-        data = (data - dmin)/(dmax-dmin)
-        data = np.transpose(data[self.icurrent,:,:,:],axes=[1,2,0])
+            data = stuff.cpu().detach().numpy()
+            if len(data.shape) < 4:
+                data = np.expand_dims(data,0)
+            
+            dmin = np.min(data); dmax = np.max(data)
+            data = (data - dmin)/(dmax-dmin)
+            data = np.transpose(data[self.icurrent,:,:,:],axes=[1,2,0])
+            
         return data
     
     def get_mask_for_display(self):
@@ -573,8 +589,11 @@ class View(Tk.Frame):
     def update_plots(self):
         self.ax1.clear() # inexplicably began causing trouble....Oh! matplotlib was only ever imported in my hook, which is global 
         self.ax1.imshow(self.model.get_data_for_display())
-        self.ax2.imshow(self.model.get_data_for_display(output=True)[:,:,self.model.icurrent])
-        self.ax3.imshow(self.model.get_mask_for_display().detach().cpu().numpy())
+        self.ax2.imshow(self.model.get_data_for_display(output=True) > 0.75)
+        self.ax2.set_title('model')
+        self.ax3.imshow(self.model.get_mask_for_display().cpu())
+        self.ax3.set_title('pathologist'
+                           )
         img_fm = self.model.get_feature_map_for_display()
         self.ax4.imshow(img_fm)
         self.ax4.set_title(self.v.get() + ': largest feature is ' +str(self.model.largest))
@@ -611,7 +630,6 @@ class View(Tk.Frame):
             pass
         
                 
-
     
 class Controller(Tk.Frame):
     def __init__(self, parent, *args, **kwargs):

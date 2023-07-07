@@ -2,13 +2,16 @@ import matplotlib.pyplot as plt
 import openslide
 import numpy as np
 import billUtils as bu
-import imageio
+import imageio.v2 as imageio
 from skimage import morphology
-from scipy.ndimage.morphology import binary_fill_holes
+from scipy.ndimage import binary_fill_holes
 
 openslide.Image.MAX_IMAGE_PIXELS = None
 TISSUE_ROOT_DIR_FILE = 'tissue_root_dir.txt'
 THRESHOLD = float(230/255)
+
+#
+# Choose a *_annotated.tif file as the "tissue file".
 
 class TandemViewer():
     def __init__(self):
@@ -16,7 +19,7 @@ class TandemViewer():
         try:
             with open(TISSUE_ROOT_DIR_FILE,'r') as f:
                 dir0 = f.read()
-                if dir0[-1] is '\n':
+                if dir0[-1] == '\n':
                     dir0 = dir0[0:-1] # clip off the newline, as it confuses
                                       #  uichoosefile
                 print('Starting at',dir0)
@@ -39,6 +42,7 @@ class TandemViewer():
                 tparts = tissue_file.split(sep='/')[0:-1]
                 tparts.append('test4_cancer.tif')
                 test4 = '/'.join(tparts)
+                print('test4 is', test4)
                 
             cpd_file = tissue_file.split(sep='.')
             cpd_file[-2] += '_cpd'
@@ -78,8 +82,10 @@ class TandemViewer():
 #                show1 = morphology.erosion(show1, selem=ck)
                 
                 ax[1].imshow(show1)
+                ax[1].set_title('model output')
                 if test4:
                     ax[2].imshow(imageio.imread(test4))
+                    ax[2].set_title('human pathologist')
             else:
                 plt.imshow(img0)
                 plt.title(bu.just_filename(bu,tissue_file))
@@ -87,7 +93,7 @@ class TandemViewer():
     
 
     def circle_kernel(self, N):
-        if N % 2 is not 1:
+        if N % 2 != 1:
             print('kernel size must be odd...')
             return None
         
